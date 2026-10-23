@@ -2,6 +2,8 @@
 
 Target: deployable end-term project by October 27, 2026.
 
+Current scaffold: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. The committed shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Planned product routes below are not implemented yet.
+
 ## System boundaries
 
 ```text

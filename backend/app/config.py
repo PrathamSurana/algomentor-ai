@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,13 @@ class Settings(BaseSettings):
     ai_provider: str = "gemini"
     gemini_api_key: str | None = None
     openai_api_key: str | None = None
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, value: str | None) -> str | None:
+        if value and not value.startswith("postgresql+psycopg://"):
+            raise ValueError("DATABASE_URL must use postgresql+psycopg://")
+        return value
 
 
 @lru_cache

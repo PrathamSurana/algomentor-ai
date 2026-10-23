@@ -1,50 +1,69 @@
 # AlgoMentor AI
 
-An AI-assisted DSA and competitive programming coach. The MVP imports public Codeforces history, computes explainable topic proficiency, recommends unsolved problems, tracks a prerequisite-based roadmap, and reviews code pasted by its owner.
+AlgoMentor AI is a DSA and competitive programming coach in development. This milestone provides a responsive dashboard shell, a FastAPI service, a Supabase PostgreSQL connection check, and a shared OpenAPI contract. It does not import coding history or display sample progress. The later product architecture is in [docs/architecture.md](docs/architecture.md).
 
-## Status
+## Prerequisites
 
-Milestone 1 is a runnable frontend/backend scaffold. Product workflows are planned in [docs/architecture.md](docs/architecture.md) and are not wired up yet. The UI makes a real request to the backend health endpoint; it does not display sample user data.
+- Node.js 20.19+ or 22.12+ and npm 10+
+- Python 3.10+ and `make`
+- Optional for a green database readiness check: a Supabase project with a PostgreSQL connection URI
 
 ## Local setup
 
-Requirements: Node.js 20.19+ or 22.12+, Python 3.10+.
+Run these commands from the repository root. The health endpoint works without Supabase credentials. To make `/health/ready` return 200, configure the database connection in step 2.
 
-```bash
-cd frontend
-cp .env.example .env.local
-npm install
-npm run dev
-```
+1. Install the backend:
 
-In another terminal:
+   ```bash
+   cd backend
+   python3 -m venv .venv
+   .venv/bin/pip install -e '.[dev]'
+   cp .env.example .env
+   cd ..
+   ```
 
-```bash
-cd backend
-cp .env.example .env
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-uvicorn app.main:app --reload
-```
+2. Edit `backend/.env`. Replace `DATABASE_URL` with the Supabase **Session pooler** connection URI from the Supabase dashboard. Change the scheme from `postgresql://` to `postgresql+psycopg://` and add `?sslmode=require` (or `&sslmode=require` if the URI already has query parameters). URL-encode special characters in the password. The placeholder URI in `.env.example` is intentionally unusable. Keep this file local; it is gitignored. The Supabase URL and publishable key are reserved for the upcoming authentication milestone, so they can remain placeholders for now.
 
-The frontend runs at `http://localhost:5173` and the API at `http://localhost:8000`. Open `http://localhost:8000/docs` for the API docs. The health endpoint does not require credentials. Other routes will require Supabase Auth once implemented.
+3. Install the frontend:
 
-## Configuration
+   ```bash
+   cd frontend
+   npm ci
+   cp .env.example .env.local
+   cd ..
+   ```
 
-See `frontend/.env.example` and `backend/.env.example`. Only `VITE_` variables are exposed to the browser. The database URL and AI provider keys must be set on the backend host, never in Vercel frontend variables.
+   For local development, `VITE_API_BASE_URL=http://localhost:8000` is already set in the example. The `VITE_SUPABASE_*` values are reserved for the authentication milestone. Never put the database URL or an AI API key in a `VITE_` variable.
 
-## Deployment outline
+4. Start the API and frontend in separate terminals from the repository root:
 
-- Vercel: set root directory to `frontend`, build command `npm run build`, output directory `dist`, and set the frontend environment variables.
-- FastAPI: build `backend/Dockerfile` on an independent container host. Set `FRONTEND_ORIGIN` to the Vercel origin. The host must expose port 8000 and provide backend secrets.
-- Supabase: apply versioned SQL migrations from `backend/migrations` before enabling authenticated routes. Migration files are part of the next milestone.
+   ```bash
+   make dev-api
+   ```
 
-## Checks
+   ```bash
+   make dev-web
+   ```
 
-```bash
-cd frontend && npm run build
-cd backend && pytest
-```
+5. Open `http://localhost:5173`. API docs are at `http://localhost:8000/docs`. Check liveness with `curl http://localhost:8000/health`; check the configured database with `curl -i http://localhost:8000/health/ready`. A 503 readiness response means the database URL is unset, still a placeholder, or unreachable. The dashboard shows a setup state in that case. It shows an error and Retry button if the API cannot be reached.
 
-AI feedback will be advisory and may be incorrect. The app will never fetch private submissions or execute pasted code.
+## Development commands
+
+| Command | Action |
+| --- | --- |
+| `make dev-api` | Start FastAPI with reload on port 8000. |
+| `make dev-web` | Start Vite on port 5173. |
+| `make contract` | Export FastAPI OpenAPI to `shared/openapi.json` and regenerate `frontend/src/generated/api.ts`. Run after changing response models or routes. |
+| `make lint` | Run Ruff and ESLint. |
+| `make test` | Run backend route tests. |
+| `make build` | Type-check and build the frontend. |
+
+The backend is the source of truth for the API contract. The frontend imports generated response types from `frontend/src/generated/api.ts`. Commit both generated files when the API changes.
+
+## Deployment
+
+- Vercel: use `frontend` as the root directory, `npm run build` as the build command, and `dist` as the output directory. Set `VITE_API_BASE_URL` to the hosted FastAPI origin.
+- FastAPI: build `backend/Dockerfile` on an independent container host. Set `FRONTEND_ORIGIN` to the exact Vercel origin and provide `DATABASE_URL` as a server-side secret.
+- Database tables and authenticated product routes are planned for the next milestone. The current readiness check runs only `SELECT 1`; it does not create tables.
+
+AI feedback will be advisory and may be incorrect. The planned Codeforces integration will use only public API data.
