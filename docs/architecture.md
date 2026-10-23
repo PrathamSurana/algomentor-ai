@@ -2,9 +2,9 @@
 
 Target: deployable end-term project by October 27, 2026.
 
-Current build: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. `POST /codeforces/sync` imports a public handle and `GET /codeforces/users/{handle}/summary` serves persisted solved problems and topic counts. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Other product routes below remain planned.
+Current build: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. `POST /codeforces/sync` imports a public handle; `GET /codeforces/users/{handle}/summary` serves persisted solved problems and topic counts; `GET /codeforces/users/{handle}/skills` returns the deterministic assessment. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Other product routes below remain planned.
 
-The current Codeforces migration creates `codeforces_users`, `codeforces_problems`, and `codeforces_submissions`. These tables intentionally hold only public data keyed by the Codeforces handle. Supabase Auth linkage and user-owned coaching tables are later milestones. The current dashboard's topic distribution is a distinct accepted-problem count per Codeforces tag; it is not yet a proficiency score.
+The current Codeforces migration creates `codeforces_users`, `codeforces_problems`, and `codeforces_submissions`. These tables intentionally hold only public data keyed by the Codeforces handle. Supabase Auth linkage and user-owned coaching tables are later milestones. The dashboard's topic distribution is a distinct accepted-problem count per Codeforces tag. A separate skill assessment endpoint now provides deterministic estimates from that history.
 
 ## System boundaries
 
@@ -50,7 +50,11 @@ Protected routes require a Supabase access token. Validation errors use 422; mis
 
 ## Scoring and recommendation rules
 
-Scoring stays deterministic and versioned. Each topic derives evidence from distinct problems, not repeated submissions. An accepted solution counts once per problem; unsuccessful attempts inform recent-performance weighting without rewarding retries. Problem rating determines difficulty weight, recency adds a bounded multiplier, and a Bayesian prior keeps small histories from producing extreme scores. Confidence depends on distinct rated problem count and recent activity; zero evidence is `insufficient_data`. Tests will pin exact examples and edge cases.
+Scoring version 1.0 is implemented in `backend/app/skill_engine.py` and exposed at `GET /codeforces/users/{handle}/skills`. Each topic uses one record per distinct attempted problem. An `OK` verdict marks a solve once. Observable failed verdicts before the first accepted submission, or on an unsolved problem, count toward efficiency; at most three failures per problem affect the score. Pending verdicts are ignored. A problem with several Codeforces tags contributes to each tag.
+
+The components are normalized to 0–1: distinct solve rate; mean difficulty of rated solved problems, with each rating mapped by `clamp((rating - 800) / 2400, 0, 1)`; efficiency `1 - sum(min(failures_per_problem, 3)) / (3 × distinct_attempted)`; and 90-day performance `new_distinct_solves / distinct_recent_attempted`. Base weights are 40%, 25%, 15%, and 20%. Missing difficulty or recent evidence removes that component and redistributes its weight proportionally. The published 0–100 score is the weighted sum rounded to an integer, so it is an estimate rather than a calibrated probability or exact skill measurement.
+
+No score is published until the full submission history is imported and the topic has at least five distinct attempted problems, three distinct solves, and two rated solves. Component evidence and rationale are still returned when the score is null. Confidence is `low` by default; `medium` requires 10 attempts, five rated solves, and three recent attempted problems; `high` requires 25 attempts, 10 rated solves, and five recent attempted problems. These thresholds are deterministic sample-size labels, not statistical confidence intervals.
 
 Recommendations exclude all solved problems and rank candidates from weak topics near the user's demonstrated rating band. Each item reports its relevant topic, rating fit, and why it was selected. Missing ratings or sparse histories use a conservative starter band and an explicit explanation.
 

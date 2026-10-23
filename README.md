@@ -1,6 +1,6 @@
 # AlgoMentor AI
 
-AlgoMentor AI is a DSA and competitive programming coach in development. It now imports **public** Codeforces profile data, submissions, and problem metadata into Supabase PostgreSQL, then displays distinct solved problems and topic counts. The later coaching architecture is in [docs/architecture.md](docs/architecture.md).
+AlgoMentor AI is a DSA and competitive programming coach in development. It imports **public** Codeforces profile data, submissions, and problem metadata into Supabase PostgreSQL, then displays distinct solved problems, topic counts, and explainable topic skill estimates. The scoring method and later coaching architecture are in [docs/architecture.md](docs/architecture.md).
 
 ## Prerequisites
 
@@ -52,6 +52,8 @@ Run these commands from the repository root. The health endpoint works without S
 ## Codeforces sync API
 
 `POST /codeforces/sync` accepts `{"handle":"tourist","mode":"refresh"}`. Use `mode:"continue"` to fetch older pages after a response with `has_more:true`. `GET /codeforces/users/{handle}/summary` reads saved data and makes no Codeforces request. Handles are validated and normalized case-insensitively; re-syncs upsert submissions and avoid duplicate counts. Each sync imports at most five pages of 1,000 submissions, so large histories need multiple **Load older** actions. A fresh sync starts at the newest page and resets the older-page cursor.
+
+`GET /codeforces/users/{handle}/skills` computes versioned topic estimates from saved submissions without calling Codeforces. It returns counts, normalized components, applied weights, confidence, and plain-language rationale. A score is `null` until history import is complete and the topic has at least five distinct attempts, three solves, and two rated solves. The dashboard charts only published estimates and shows insufficient-data states for other topics. Skill scores are advisory estimates, not exact measurements.
 
 The backend spaces official API calls by at least 2.1 seconds in its single process and retries transient failures up to three times. Deploy one API worker for this in-process limiter; multiple workers require a shared limiter. The problem catalog refreshes at most once every 24 hours. The integration uses only Codeforces' [public API methods](https://codeforces.com/apiHelp/methods) and does not request source code. These routes are currently public because account authentication is scheduled for a later milestone; do not attach private app data to them.
 

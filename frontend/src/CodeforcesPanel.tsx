@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import { ArrowUpRight, LoaderCircle, RefreshCw } from 'lucide-react'
-import { getCodeforcesSummary, syncCodeforces, type CodeforcesSummary } from './api'
+import { getCodeforcesSkills, getCodeforcesSummary, syncCodeforces, type CodeforcesSummary, type SkillAssessment } from './api'
+import SkillAssessmentPanel from './SkillAssessmentPanel'
 
 const STORAGE_KEY = 'algomentor_codeforces_handle'
 const TopicChart = lazy(() => import('./TopicChart'))
@@ -8,7 +9,10 @@ const TopicChart = lazy(() => import('./TopicChart'))
 export default function CodeforcesPanel() {
   const [handle, setHandle] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '')
   const [summary, setSummary] = useState<CodeforcesSummary | null>(null)
+  const [assessment, setAssessment] = useState<SkillAssessment | null>(null)
   const [loading, setLoading] = useState(Boolean(localStorage.getItem(STORAGE_KEY)))
+  const [skillsLoading, setSkillsLoading] = useState(Boolean(localStorage.getItem(STORAGE_KEY)))
+  const [skillsError, setSkillsError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -21,6 +25,10 @@ export default function CodeforcesPanel() {
       .then((data) => { if (active) setSummary(data) })
       .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : 'Could not load saved history.') })
       .finally(() => { if (active) setLoading(false) })
+    getCodeforcesSkills(saved)
+      .then((data) => { if (active) setAssessment(data) })
+      .catch((cause: unknown) => { if (active) setSkillsError(cause instanceof Error ? cause.message : 'Could not load skill estimates.') })
+      .finally(() => { if (active) setSkillsLoading(false) })
     return () => { active = false }
   }, [])
 
@@ -29,16 +37,25 @@ export default function CodeforcesPanel() {
     setError(null)
     setNotice(null)
     setSyncing(true)
+    setSkillsError(null)
+    setSkillsLoading(true)
     try {
       const result = await syncCodeforces(mode === 'continue' ? summary?.handle ?? handle.trim() : handle.trim(), mode)
       localStorage.setItem(STORAGE_KEY, result.handle)
       setHandle(result.handle)
       setSummary(await getCodeforcesSummary(result.handle))
+      setAssessment(null)
+      try {
+        setAssessment(await getCodeforcesSkills(result.handle))
+      } catch (cause) {
+        setSkillsError(cause instanceof Error ? cause.message : 'Could not load skill estimates.')
+      }
       setNotice(`${result.new_submissions} new submissions saved. ${result.has_more ? 'Older pages are available.' : 'History is up to date.'}`)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Sync failed. Please try again.')
     } finally {
       setSyncing(false)
+      setSkillsLoading(false)
     }
   }
 
@@ -66,6 +83,7 @@ export default function CodeforcesPanel() {
         <Stat label="Submissions" value={String(summary.total_submissions)} detail={summary.has_more ? 'Older pages available' : 'Imported history'} />
       </section>
       {summary.has_more && <button type="button" disabled={syncing} onClick={() => runSync('continue')} className="rounded-xl border border-indigo-400/30 px-4 py-2.5 text-sm font-medium text-indigo-200 hover:bg-indigo-400/10 disabled:opacity-60">Load older submissions</button>}
+      <SkillAssessmentPanel assessment={assessment} loading={skillsLoading} error={skillsError} />
       <section className="grid gap-5 xl:grid-cols-[1fr_1.3fr]">
         <div className="rounded-2xl border border-white/10 bg-[#111929] p-6"><h3 className="text-lg font-semibold">Topic distribution</h3><p className="mt-1 text-xs text-slate-500">Each accepted problem counts once per tag.</p>{chartData.length ? <Suspense fallback={<p className="mt-8 text-sm text-slate-400">Loading chart…</p>}><TopicChart data={chartData} /></Suspense> : <p className="mt-8 text-sm text-slate-400">No accepted tagged problems in the imported history.</p>}</div>
         <div className="rounded-2xl border border-white/10 bg-[#111929] p-6"><h3 className="text-lg font-semibold">Solved problems</h3><p className="mt-1 text-xs text-slate-500">Most recent 100 distinct accepted problems.</p>{summary.solved_problems.length ? <ul className="mt-5 max-h-80 divide-y divide-white/10 overflow-auto">{summary.solved_problems.map((problem) => <li key={`${problem.contest_id}-${problem.problem_index}`} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{problem.name}</p><p className="mt-1 text-xs text-slate-500">{problem.contest_id}{problem.problem_index} · {problem.rating ?? 'Unrated'} · {problem.tags.slice(0, 2).join(', ') || 'No tags'}</p></div><a href={problem.url} target="_blank" rel="noreferrer" aria-label={`Open ${problem.name} on Codeforces`} className="shrink-0 rounded-lg p-2 text-indigo-300 hover:bg-indigo-400/10"><ArrowUpRight size={17} /></a></li>)}</ul> : <p className="mt-8 text-sm text-slate-400">No accepted problems in the imported history.</p>}</div>
