@@ -2,23 +2,23 @@ import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import { ArrowUpRight, LoaderCircle, RefreshCw } from 'lucide-react'
 import { getCodeforcesSkills, getCodeforcesSummary, syncCodeforces, type CodeforcesSummary, type SkillAssessment } from './api'
 import SkillAssessmentPanel from './SkillAssessmentPanel'
+import { CODEFORCES_HANDLE_KEY } from './storage'
 
-const STORAGE_KEY = 'algomentor_codeforces_handle'
 const TopicChart = lazy(() => import('./TopicChart'))
 
 export default function CodeforcesPanel() {
-  const [handle, setHandle] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '')
+  const [handle, setHandle] = useState(() => localStorage.getItem(CODEFORCES_HANDLE_KEY) ?? '')
   const [summary, setSummary] = useState<CodeforcesSummary | null>(null)
   const [assessment, setAssessment] = useState<SkillAssessment | null>(null)
-  const [loading, setLoading] = useState(Boolean(localStorage.getItem(STORAGE_KEY)))
-  const [skillsLoading, setSkillsLoading] = useState(Boolean(localStorage.getItem(STORAGE_KEY)))
+  const [loading, setLoading] = useState(Boolean(localStorage.getItem(CODEFORCES_HANDLE_KEY)))
+  const [skillsLoading, setSkillsLoading] = useState(Boolean(localStorage.getItem(CODEFORCES_HANDLE_KEY)))
   const [skillsError, setSkillsError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(CODEFORCES_HANDLE_KEY)
     if (!saved) return
     let active = true
     getCodeforcesSummary(saved)
@@ -41,7 +41,7 @@ export default function CodeforcesPanel() {
     setSkillsLoading(true)
     try {
       const result = await syncCodeforces(mode === 'continue' ? summary?.handle ?? handle.trim() : handle.trim(), mode)
-      localStorage.setItem(STORAGE_KEY, result.handle)
+      localStorage.setItem(CODEFORCES_HANDLE_KEY, result.handle)
       setHandle(result.handle)
       setSummary(await getCodeforcesSummary(result.handle))
       setAssessment(null)

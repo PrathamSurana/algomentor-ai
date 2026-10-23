@@ -5,6 +5,7 @@ type ReadinessResponse = components['schemas']['ReadinessResponse']
 export type CodeforcesSummary = components['schemas']['SummaryResponse']
 export type SyncResponse = components['schemas']['SyncResponse']
 export type SkillAssessment = components['schemas']['SkillAssessmentResponse']
+export type RecommendationsResponse = components['schemas']['RecommendationsResponse']
 
 export type ServiceState =
   | { kind: 'loading' }
@@ -81,5 +82,12 @@ export function getCodeforcesSummary(handle: string) {
 export function getCodeforcesSkills(handle: string) {
   return apiRequest<SkillAssessment>(
     `/codeforces/users/${encodeURIComponent(handle)}/skills`, { method: 'GET' },
+  )
+}
+
+export function getRecommendations(handle: string, limit = 8) {
+  return apiRequest<RecommendationsResponse>(
+    `/codeforces/users/${encodeURIComponent(handle)}/recommendations?limit=${limit}`,
+    { method: 'GET' },
   )
 }

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, CircleAlert, Code2, Database, LayoutDashboard, LoaderCircle, Map, Braces, RefreshCw } from 'lucide-react'
 import { getServiceState, type ServiceState } from './api'
 import CodeforcesPanel from './CodeforcesPanel'
+import RecommendationsPage from './RecommendationsPage'
 
 type Section = 'overview' | 'problems' | 'roadmap' | 'review'
 
 const navigation = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'problems', label: 'Problems', icon: Braces },
+  { id: 'problems', label: 'Recommendations', icon: Braces },
   { id: 'roadmap', label: 'Roadmap', icon: Map },
   { id: 'review', label: 'Code review', icon: Code2 },
 ] as const
@@ -46,7 +47,8 @@ function App() {
           {service.kind === 'setup' && <div role="status" className="flex flex-wrap items-center gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] p-5"><Database size={22} className="shrink-0 text-amber-300" /><div className="min-w-0 flex-1"><p className="font-semibold text-amber-100">Setup needed</p><p className="mt-1 text-sm text-amber-100/70">{service.message}</p></div><button type="button" onClick={retry} className="inline-flex items-center gap-2 rounded-lg bg-amber-300/10 px-3 py-2 text-sm font-medium text-amber-100 hover:bg-amber-300/20"><RefreshCw size={15} /> Recheck</button></div>}
           {service.kind === 'ready' && <div role="status" className="flex items-center gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] p-5 text-sm text-emerald-100"><CheckCircle2 size={20} className="text-emerald-300" /> API and database are connected.</div>}
         </div>
-        {(section === 'overview' || section === 'problems') && <CodeforcesPanel />}
+        {section === 'overview' && <CodeforcesPanel />}
+        {section === 'problems' && <RecommendationsPage onOpenOverview={() => setSection('overview')} />}
         {section === 'roadmap' && <EmptySection title="Learning roadmap" description="Prerequisite-based milestones will appear here in a later milestone." icon={Map} />}
         {section === 'review' && <EmptySection title="Code review" description="AI feedback on pasted solutions will appear here in a later milestone." icon={Code2} />}
       </main>
