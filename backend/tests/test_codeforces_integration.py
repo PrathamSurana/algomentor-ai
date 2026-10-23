@@ -117,6 +117,17 @@ def test_sync_persists_actual_fixture_data_and_deduplicates(fixture_api):
     assert any(path.endswith("user.status") for path, _ in calls)
     assert any(path.endswith("problemset.problems") for path, _ in calls)
 
+    skills = api.get("/codeforces/users/FixtureUser/skills")
+    assert skills.status_code == 200
+    assessment = skills.json()
+    assert assessment["status"] == "insufficient_data"
+    topic = next(item for item in assessment["topics"] if item["topic"] == "implementation")
+    assert topic["score"] is None
+    assert topic["attempted_unique"] == 2
+    assert topic["solved_unique"] == 2
+    assert "solve_rate" in topic["components"]
+    assert topic["rationale"]
+
 
 def test_invalid_handle_and_missing_user(fixture_api):
     api, calls, _ = fixture_api

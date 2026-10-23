@@ -54,6 +54,99 @@
         "title": "ReadinessResponse",
         "type": "object"
       },
+      "ScoreComponents": {
+        "properties": {
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "efficiency": {
+            "title": "Efficiency",
+            "type": "number"
+          },
+          "recent_performance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Performance"
+          },
+          "solve_rate": {
+            "title": "Solve Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "solve_rate",
+          "difficulty",
+          "efficiency",
+          "recent_performance"
+        ],
+        "title": "ScoreComponents",
+        "type": "object"
+      },
+      "SkillAssessmentResponse": {
+        "properties": {
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          },
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "history_complete": {
+            "title": "History Complete",
+            "type": "boolean"
+          },
+          "recent_window_days": {
+            "title": "Recent Window Days",
+            "type": "integer"
+          },
+          "scoring_version": {
+            "title": "Scoring Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "estimated",
+              "insufficient_data"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TopicAssessment"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "handle",
+          "scoring_version",
+          "evaluated_at",
+          "recent_window_days",
+          "history_complete",
+          "status",
+          "topics"
+        ],
+        "title": "SkillAssessmentResponse",
+        "type": "object"
+      },
       "SolvedProblem": {
         "properties": {
           "contest_id": {
@@ -260,6 +353,111 @@
         "title": "SyncResponse",
         "type": "object"
       },
+      "TopicAssessment": {
+        "properties": {
+          "attempted_unique": {
+            "title": "Attempted Unique",
+            "type": "integer"
+          },
+          "average_solved_rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Solved Rating"
+          },
+          "components": {
+            "$ref": "#/components/schemas/ScoreComponents"
+          },
+          "confidence": {
+            "enum": [
+              "insufficient_data",
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "effective_weights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Effective Weights",
+            "type": "object"
+          },
+          "failed_attempts": {
+            "title": "Failed Attempts",
+            "type": "integer"
+          },
+          "rated_solved": {
+            "title": "Rated Solved",
+            "type": "integer"
+          },
+          "rationale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rationale",
+            "type": "array"
+          },
+          "recent_attempted": {
+            "title": "Recent Attempted",
+            "type": "integer"
+          },
+          "recent_solved": {
+            "title": "Recent Solved",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "solved_unique": {
+            "title": "Solved Unique",
+            "type": "integer"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          },
+          "unrated_solved": {
+            "title": "Unrated Solved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "topic",
+          "score",
+          "confidence",
+          "attempted_unique",
+          "solved_unique",
+          "rated_solved",
+          "unrated_solved",
+          "failed_attempts",
+          "recent_attempted",
+          "recent_solved",
+          "average_solved_rating",
+          "components",
+          "effective_weights",
+          "rationale"
+        ],
+        "title": "TopicAssessment",
+        "type": "object"
+      },
       "TopicCount": {
         "properties": {
           "solved_count": {
@@ -362,6 +560,51 @@
           }
         },
         "summary": "Sync Codeforces",
+        "tags": [
+          "codeforces"
+        ]
+      }
+    },
+    "/codeforces/users/{handle}/skills": {
+      "get": {
+        "operationId": "codeforces_skills_codeforces_users__handle__skills_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+              "title": "Handle",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillAssessmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Codeforces Skills",
         "tags": [
           "codeforces"
         ]

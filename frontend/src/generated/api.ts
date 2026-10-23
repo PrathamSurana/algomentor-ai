@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/codeforces/users/{handle}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Codeforces Skills */
+        get: operations["codeforces_skills_codeforces_users__handle__skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/codeforces/users/{handle}/summary": {
         parameters: {
             query?: never;
@@ -102,6 +119,40 @@ export interface components {
              */
             status: "ok" | "unavailable";
         };
+        /** ScoreComponents */
+        ScoreComponents: {
+            /** Difficulty */
+            difficulty: number | null;
+            /** Efficiency */
+            efficiency: number;
+            /** Recent Performance */
+            recent_performance: number | null;
+            /** Solve Rate */
+            solve_rate: number;
+        };
+        /** SkillAssessmentResponse */
+        SkillAssessmentResponse: {
+            /**
+             * Evaluated At
+             * Format: date-time
+             */
+            evaluated_at: string;
+            /** Handle */
+            handle: string;
+            /** History Complete */
+            history_complete: boolean;
+            /** Recent Window Days */
+            recent_window_days: number;
+            /** Scoring Version */
+            scoring_version: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "estimated" | "insufficient_data";
+            /** Topics */
+            topics: components["schemas"]["TopicAssessment"][];
+        };
         /** SolvedProblem */
         SolvedProblem: {
             /** Contest Id */
@@ -172,6 +223,41 @@ export interface components {
             /** Total Submissions */
             total_submissions: number;
         };
+        /** TopicAssessment */
+        TopicAssessment: {
+            /** Attempted Unique */
+            attempted_unique: number;
+            /** Average Solved Rating */
+            average_solved_rating: number | null;
+            components: components["schemas"]["ScoreComponents"];
+            /**
+             * Confidence
+             * @enum {string}
+             */
+            confidence: "insufficient_data" | "low" | "medium" | "high";
+            /** Effective Weights */
+            effective_weights: {
+                [key: string]: number;
+            };
+            /** Failed Attempts */
+            failed_attempts: number;
+            /** Rated Solved */
+            rated_solved: number;
+            /** Rationale */
+            rationale: string[];
+            /** Recent Attempted */
+            recent_attempted: number;
+            /** Recent Solved */
+            recent_solved: number;
+            /** Score */
+            score: number | null;
+            /** Solved Unique */
+            solved_unique: number;
+            /** Topic */
+            topic: string;
+            /** Unrated Solved */
+            unrated_solved: number;
+        };
         /** TopicCount */
         TopicCount: {
             /** Solved Count */
@@ -221,6 +307,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    codeforces_skills_codeforces_users__handle__skills_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillAssessmentResponse"];
                 };
             };
             /** @description Validation Error */

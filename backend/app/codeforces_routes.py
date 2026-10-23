@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.codeforces import HANDLE_PATTERN, CodeforcesClient, CodeforcesError, get_codeforces_client
-from app.codeforces_service import get_summary, sync_handle
+from app.codeforces_service import get_skill_assessment, get_summary, sync_handle
 from app.database import get_session
 
 router = APIRouter(prefix="/codeforces", tags=["codeforces"])
@@ -54,6 +54,40 @@ class SummaryResponse(BaseModel):
     solved_problems: list[SolvedProblem]
 
 
+class ScoreComponents(BaseModel):
+    solve_rate: float
+    difficulty: float | None
+    efficiency: float
+    recent_performance: float | None
+
+
+class TopicAssessment(BaseModel):
+    topic: str
+    score: int | None = Field(ge=0, le=100)
+    confidence: Literal["insufficient_data", "low", "medium", "high"]
+    attempted_unique: int
+    solved_unique: int
+    rated_solved: int
+    unrated_solved: int
+    failed_attempts: int
+    recent_attempted: int
+    recent_solved: int
+    average_solved_rating: int | None
+    components: ScoreComponents
+    effective_weights: dict[str, float]
+    rationale: list[str]
+
+
+class SkillAssessmentResponse(BaseModel):
+    handle: str
+    scoring_version: str
+    evaluated_at: datetime
+    recent_window_days: int
+    history_complete: bool
+    status: Literal["estimated", "insufficient_data"]
+    topics: list[TopicAssessment]
+
+
 def _database_error(exc: SQLAlchemyError) -> HTTPException:
     return HTTPException(
         status_code=503,
@@ -94,3 +128,20 @@ def codeforces_summary(
             detail={"code": "not_synced", "message": "This handle has not been synced yet"},
         )
     return summary
+
+
+@router.get("/users/{handle}/skills", response_model=SkillAssessmentResponse)
+def codeforces_skills(
+    handle: Annotated[str, Path(min_length=1, max_length=24, pattern=HANDLE_PATTERN.pattern)],
+    session: Annotated[Session, Depends(get_session)],
+) -> dict:
+    try:
+        assessment = get_skill_assessment(session, handle)
+    except SQLAlchemyError as exc:
+        raise _database_error(exc) from exc
+    if assessment is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_synced", "message": "This handle has not been synced yet"},
+        )
+    return assessment

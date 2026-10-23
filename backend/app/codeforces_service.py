@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.codeforces import CodeforcesClient, CodeforcesError
 from app.models import CodeforcesUser, Problem, Submission
+from app.skill_engine import RECENT_DAYS, SCORING_VERSION, Attempt, assess_topics
 
 PAGE_SIZE = 1000
 MAX_PAGES_PER_SYNC = 5
@@ -235,4 +236,55 @@ def get_summary(session: Session, handle: str) -> dict | None:
             for topic, count in sorted(topics.items(), key=lambda item: (-item[1], item[0]))
         ],
         "solved_problems": list(solved.values())[:100],
+    }
+
+
+def get_skill_assessment(session: Session, handle: str) -> dict | None:
+    user = session.get(CodeforcesUser, handle.lower())
+    if user is None:
+        return None
+    rows = session.execute(
+        select(Submission, Problem)
+        .outerjoin(
+            Problem,
+            and_(
+                Submission.contest_id == Problem.contest_id,
+                Submission.problem_index == Problem.problem_index,
+            ),
+        )
+        .where(Submission.handle_key == user.handle_key)
+    ).all()
+    attempts = []
+    for submission, problem in rows:
+        if submission.contest_id is None:
+            continue
+        tags = problem.tags if problem and problem.tags else submission.tags_at_import
+        rating = (
+            problem.rating
+            if problem and problem.rating is not None
+            else submission.rating_at_import
+        )
+        attempts.append(
+            Attempt(
+                submission_id=submission.submission_id,
+                problem_key=(submission.contest_id, submission.problem_index),
+                tags=tuple(tags or []),
+                rating=rating,
+                verdict=submission.verdict,
+                submitted_at=submission.created_at,
+            )
+        )
+    now = datetime.now(timezone.utc)
+    complete = user.synced_at is not None and user.next_from is None
+    topics = assess_topics(attempts, evaluated_at=now, history_complete=complete)
+    return {
+        "handle": user.handle,
+        "scoring_version": SCORING_VERSION,
+        "evaluated_at": now,
+        "recent_window_days": RECENT_DAYS,
+        "history_complete": complete,
+        "status": "estimated"
+        if any(topic["score"] is not None for topic in topics)
+        else "insufficient_data",
+        "topics": topics,
     }
