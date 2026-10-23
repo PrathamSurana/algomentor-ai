@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/codeforces/users/{handle}/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Codeforces Recommendations */
+        get: operations["codeforces_recommendations_codeforces_users__handle__recommendations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/codeforces/users/{handle}/skills": {
         parameters: {
             query?: never;
@@ -106,6 +123,30 @@ export interface components {
              */
             status: "ok";
         };
+        /** ProblemRecommendation */
+        ProblemRecommendation: {
+            /** Contest Id */
+            contest_id: number;
+            contributions: components["schemas"]["RecommendationContributions"];
+            /** Name */
+            name: string;
+            /** Problem Index */
+            problem_index: string;
+            /** Rank Score */
+            rank_score: number;
+            /** Rating */
+            rating: number | null;
+            /** Rationale */
+            rationale: string[];
+            /** Solved Count */
+            solved_count: number | null;
+            /** Tags */
+            tags: string[];
+            /** Target Topic */
+            target_topic: string;
+            /** Url */
+            url: string;
+        };
         /** ReadinessResponse */
         ReadinessResponse: {
             /**
@@ -118,6 +159,39 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "unavailable";
+        };
+        /** RecommendationContributions */
+        RecommendationContributions: {
+            /** Difficulty */
+            difficulty: number;
+            /** Diversity */
+            diversity: number;
+            /** Prerequisites */
+            prerequisites: number;
+            /** Topic */
+            topic: number;
+        };
+        /** RecommendationsResponse */
+        RecommendationsResponse: {
+            /** Cold Start */
+            cold_start: boolean;
+            /** Handle */
+            handle: string;
+            /** Recommendations */
+            recommendations: components["schemas"]["ProblemRecommendation"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "catalog_limited" | "history_incomplete" | "history_unverifiable";
+            /** Synced At */
+            synced_at: string | null;
+            /** Target Rating */
+            target_rating: number | null;
+            /** Target Rating Source */
+            target_rating_source: string | null;
+            /** Version */
+            version: string;
         };
         /** ScoreComponents */
         ScoreComponents: {
@@ -307,6 +381,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    codeforces_recommendations_codeforces_users__handle__recommendations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationsResponse"];
                 };
             };
             /** @description Validation Error */

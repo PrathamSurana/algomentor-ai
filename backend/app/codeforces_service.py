@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.codeforces import CodeforcesClient, CodeforcesError
 from app.models import CodeforcesUser, Problem, Submission
+from app.recommendation_engine import RECOMMENDATION_VERSION, CandidateProblem, rank_problems
 from app.skill_engine import RECENT_DAYS, SCORING_VERSION, Attempt, assess_topics
 
 PAGE_SIZE = 1000
@@ -105,16 +106,24 @@ def sync_handle(session: Session, client: CodeforcesClient, handle: str, mode: s
     problem_rows: dict[tuple[int, str], dict] = {}
     submission_rows: dict[int, dict] = {}
     for raw in page_rows:
+        if not isinstance(raw, dict):
+            raise CodeforcesError("codeforces_bad_response", "Submission metadata is incomplete")
         problem = raw.get("problem")
-        if not isinstance(problem, dict):
-            continue
+        if (
+            not isinstance(problem, dict)
+            or not isinstance(problem.get("index"), str)
+            or not problem["index"]
+        ):
+            raise CodeforcesError(
+                "codeforces_bad_response", "Submission problem identity is incomplete"
+            )
         normalized = _problem(problem, now)
         if normalized:
             problem_rows[(normalized["contest_id"], normalized["problem_index"])] = normalized
         submission_id = raw.get("id")
         timestamp = raw.get("creationTimeSeconds")
         if not isinstance(submission_id, int) or not isinstance(timestamp, int):
-            continue
+            raise CodeforcesError("codeforces_bad_response", "Submission metadata is incomplete")
         submission_rows[submission_id] = {
             "submission_id": submission_id,
             "handle_key": key,
@@ -287,4 +296,76 @@ def get_skill_assessment(session: Session, handle: str) -> dict | None:
         if any(topic["score"] is not None for topic in topics)
         else "insufficient_data",
         "topics": topics,
+    }
+
+
+def get_recommendations(session: Session, handle: str, limit: int = 8) -> dict | None:
+    user = session.get(CodeforcesUser, handle.lower())
+    if user is None:
+        return None
+    empty = {
+        "handle": user.handle,
+        "version": RECOMMENDATION_VERSION,
+        "synced_at": user.synced_at,
+        "target_rating": None,
+        "target_rating_source": None,
+        "cold_start": False,
+        "recommendations": [],
+    }
+    if user.synced_at is None or user.next_from is not None:
+        return {**empty, "status": "history_incomplete"}
+
+    accepted = session.execute(
+        select(Submission, Problem)
+        .outerjoin(
+            Problem,
+            and_(
+                Submission.contest_id == Problem.contest_id,
+                Submission.problem_index == Problem.problem_index,
+            ),
+        )
+        .where(Submission.handle_key == user.handle_key, Submission.verdict == "OK")
+    ).all()
+    if any(
+        submission.contest_id is None or not submission.problem_index for submission, _ in accepted
+    ):
+        return {**empty, "status": "history_unverifiable"}
+
+    solved: dict[tuple[int, str], int | None] = {}
+    for submission, problem in accepted:
+        key = (submission.contest_id, submission.problem_index)
+        rating = (
+            problem.rating
+            if problem and problem.rating is not None
+            else submission.rating_at_import
+        )
+        if key not in solved or solved[key] is None:
+            solved[key] = rating
+
+    assessment = get_skill_assessment(session, handle)
+    catalog = session.scalars(select(Problem)).all()
+    candidates = [
+        CandidateProblem(
+            contest_id=problem.contest_id,
+            problem_index=problem.problem_index,
+            name=problem.name,
+            rating=problem.rating,
+            tags=tuple(problem.tags or []),
+            solved_count=problem.solved_count,
+        )
+        for problem in catalog
+    ]
+    ranking = rank_problems(
+        candidates,
+        solved_keys=set(solved),
+        assessments=assessment["topics"],
+        solved_ratings=[rating for rating in solved.values() if rating is not None],
+        profile_rating=user.rating,
+        limit=limit,
+    )
+    return {
+        "handle": user.handle,
+        "synced_at": user.synced_at,
+        **ranking,
+        "status": "ready" if len(ranking["recommendations"]) >= 5 else "catalog_limited",
     }

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +11,7 @@ from app import codeforces_service
 from app.codeforces import CodeforcesClient, get_codeforces_client
 from app.database import get_session
 from app.main import app
-from app.models import Base, Problem
+from app.models import Base, CodeforcesUser, Problem
 
 
 def api_result(result):
@@ -193,3 +195,92 @@ def test_codeforces_rate_limit_response_is_retried(monkeypatch):
     client = CodeforcesClient(transport=httpx.MockTransport(handler), pace_seconds=0)
     assert client.profile("FixtureUser")["handle"] == "FixtureUser"
     assert attempts == 2
+
+
+def test_recommendation_route_uses_saved_catalog_and_filters_solved(fixture_api):
+    api, _, engine = fixture_api
+    assert api.post("/codeforces/sync", json={"handle": "FixtureUser"}).status_code == 200
+    with Session(engine) as session:
+        session.add_all(
+            [
+                Problem(
+                    contest_id=200 + index,
+                    problem_index="A",
+                    name=f"Unsolved fixture {index}",
+                    rating=1400,
+                    tags=["implementation"],
+                    solved_count=100,
+                )
+                for index in range(6)
+            ]
+        )
+        session.commit()
+
+    response = api.get("/codeforces/users/FixtureUser/recommendations?limit=5")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "ready"
+    assert len(body["recommendations"]) == 5
+    assert all(item["contest_id"] != 100 for item in body["recommendations"])
+    assert body["recommendations"][0]["rationale"]
+    assert body["recommendations"][0]["contributions"]["difficulty"] >= 0
+
+    with Session(engine) as session:
+        session.get(CodeforcesUser, "fixtureuser").next_from = 1001
+        session.commit()
+    incomplete = api.get("/codeforces/users/FixtureUser/recommendations")
+    assert incomplete.status_code == 200
+    assert incomplete.json()["status"] == "history_incomplete"
+    assert incomplete.json()["recommendations"] == []
+
+
+def test_recommendation_route_supports_complete_cold_start(fixture_api):
+    api, _, engine = fixture_api
+    with Session(engine) as session:
+        session.add(
+            CodeforcesUser(
+                handle_key="newbie", handle="Newbie", synced_at=datetime.now(timezone.utc)
+            )
+        )
+        session.add_all(
+            [
+                Problem(
+                    contest_id=300 + index,
+                    problem_index="A",
+                    name=f"Starter fixture {index}",
+                    rating=900 + index * 100,
+                    tags=["implementation"],
+                )
+                for index in range(5)
+            ]
+        )
+        session.commit()
+    response = api.get("/codeforces/users/Newbie/recommendations")
+    assert response.status_code == 200, response.text
+    assert response.json()["cold_start"] is True
+    assert response.json()["target_rating"] == 1000
+    assert len(response.json()["recommendations"]) == 5
+
+
+def test_malformed_submission_cannot_mark_history_complete(fixture_api):
+    api, _, _ = fixture_api
+
+    def handler(request: httpx.Request):
+        if request.url.path.endswith("user.info"):
+            return httpx.Response(200, json=api_result([{"handle": "FixtureUser"}]))
+        if request.url.path.endswith("problemset.problems"):
+            return httpx.Response(200, json=api_result({"problems": [], "problemStatistics": []}))
+        return httpx.Response(
+            200,
+            json=api_result(
+                [{"id": 1, "creationTimeSeconds": 1700000000, "verdict": "OK", "problem": {}}]
+            ),
+        )
+
+    app.dependency_overrides[get_codeforces_client] = lambda: CodeforcesClient(
+        transport=httpx.MockTransport(handler), pace_seconds=0
+    )
+    response = api.post("/codeforces/sync", json={"handle": "FixtureUser"})
+    assert response.status_code == 502
+    assert response.json()["detail"]["code"] == "codeforces_bad_response"
+    assert api.get("/codeforces/users/FixtureUser/recommendations").status_code == 404

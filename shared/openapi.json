@@ -28,6 +28,90 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ProblemRecommendation": {
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "integer"
+          },
+          "contributions": {
+            "$ref": "#/components/schemas/RecommendationContributions"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "problem_index": {
+            "title": "Problem Index",
+            "type": "string"
+          },
+          "rank_score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Rank Score",
+            "type": "number"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "rationale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rationale",
+            "type": "array"
+          },
+          "solved_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solved Count"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "target_topic": {
+            "title": "Target Topic",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest_id",
+          "problem_index",
+          "name",
+          "rating",
+          "tags",
+          "solved_count",
+          "url",
+          "target_topic",
+          "rank_score",
+          "contributions",
+          "rationale"
+        ],
+        "title": "ProblemRecommendation",
+        "type": "object"
+      },
       "ReadinessResponse": {
         "properties": {
           "database": {
@@ -52,6 +136,113 @@
           "database"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "RecommendationContributions": {
+        "properties": {
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "number"
+          },
+          "diversity": {
+            "title": "Diversity",
+            "type": "number"
+          },
+          "prerequisites": {
+            "title": "Prerequisites",
+            "type": "number"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "number"
+          }
+        },
+        "required": [
+          "topic",
+          "difficulty",
+          "prerequisites",
+          "diversity"
+        ],
+        "title": "RecommendationContributions",
+        "type": "object"
+      },
+      "RecommendationsResponse": {
+        "properties": {
+          "cold_start": {
+            "title": "Cold Start",
+            "type": "boolean"
+          },
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/ProblemRecommendation"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "catalog_limited",
+              "history_incomplete",
+              "history_unverifiable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "target_rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rating"
+          },
+          "target_rating_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rating Source"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "handle",
+          "version",
+          "synced_at",
+          "status",
+          "target_rating",
+          "target_rating_source",
+          "cold_start",
+          "recommendations"
+        ],
+        "title": "RecommendationsResponse",
         "type": "object"
       },
       "ScoreComponents": {
@@ -560,6 +751,63 @@
           }
         },
         "summary": "Sync Codeforces",
+        "tags": [
+          "codeforces"
+        ]
+      }
+    },
+    "/codeforces/users/{handle}/recommendations": {
+      "get": {
+        "operationId": "codeforces_recommendations_codeforces_users__handle__recommendations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+              "title": "Handle",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 10,
+              "minimum": 5,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Codeforces Recommendations",
         "tags": [
           "codeforces"
         ]

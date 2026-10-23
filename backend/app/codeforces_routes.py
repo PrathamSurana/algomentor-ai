@@ -1,13 +1,18 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.codeforces import HANDLE_PATTERN, CodeforcesClient, CodeforcesError, get_codeforces_client
-from app.codeforces_service import get_skill_assessment, get_summary, sync_handle
+from app.codeforces_service import (
+    get_recommendations,
+    get_skill_assessment,
+    get_summary,
+    sync_handle,
+)
 from app.database import get_session
 
 router = APIRouter(prefix="/codeforces", tags=["codeforces"])
@@ -88,6 +93,38 @@ class SkillAssessmentResponse(BaseModel):
     topics: list[TopicAssessment]
 
 
+class RecommendationContributions(BaseModel):
+    topic: float
+    difficulty: float
+    prerequisites: float
+    diversity: float
+
+
+class ProblemRecommendation(BaseModel):
+    contest_id: int
+    problem_index: str
+    name: str
+    rating: int | None
+    tags: list[str]
+    solved_count: int | None
+    url: str
+    target_topic: str
+    rank_score: float = Field(ge=0, le=100)
+    contributions: RecommendationContributions
+    rationale: list[str]
+
+
+class RecommendationsResponse(BaseModel):
+    handle: str
+    version: str
+    synced_at: datetime | None
+    status: Literal["ready", "catalog_limited", "history_incomplete", "history_unverifiable"]
+    target_rating: int | None
+    target_rating_source: str | None
+    cold_start: bool
+    recommendations: list[ProblemRecommendation]
+
+
 def _database_error(exc: SQLAlchemyError) -> HTTPException:
     return HTTPException(
         status_code=503,
@@ -145,3 +182,21 @@ def codeforces_skills(
             detail={"code": "not_synced", "message": "This handle has not been synced yet"},
         )
     return assessment
+
+
+@router.get("/users/{handle}/recommendations", response_model=RecommendationsResponse)
+def codeforces_recommendations(
+    handle: Annotated[str, Path(min_length=1, max_length=24, pattern=HANDLE_PATTERN.pattern)],
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=5, le=10)] = 8,
+) -> dict:
+    try:
+        recommendations = get_recommendations(session, handle, limit)
+    except SQLAlchemyError as exc:
+        raise _database_error(exc) from exc
+    if recommendations is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_synced", "message": "This handle has not been synced yet"},
+        )
+    return recommendations
