@@ -2,7 +2,9 @@
 
 Target: deployable end-term project by October 27, 2026.
 
-Current scaffold: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. The committed shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Planned product routes below are not implemented yet.
+Current build: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. `POST /codeforces/sync` imports a public handle and `GET /codeforces/users/{handle}/summary` serves persisted solved problems and topic counts. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Other product routes below remain planned.
+
+The current Codeforces migration creates `codeforces_users`, `codeforces_problems`, and `codeforces_submissions`. These tables intentionally hold only public data keyed by the Codeforces handle. Supabase Auth linkage and user-owned coaching tables are later milestones. The current dashboard's topic distribution is a distinct accepted-problem count per Codeforces tag; it is not yet a proficiency score.
 
 ## System boundaries
 

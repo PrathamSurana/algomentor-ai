@@ -2,6 +2,8 @@ import type { components } from './generated/api'
 
 type HealthResponse = components['schemas']['HealthResponse']
 type ReadinessResponse = components['schemas']['ReadinessResponse']
+export type CodeforcesSummary = components['schemas']['SummaryResponse']
+export type SyncResponse = components['schemas']['SyncResponse']
 
 export type ServiceState =
   | { kind: 'loading' }
@@ -40,4 +42,37 @@ export async function getServiceState(signal: AbortSignal): Promise<ServiceState
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     return { kind: 'error', message: 'Could not reach the API. Check VITE_API_BASE_URL and that FastAPI is running.' }
   }
+}
+
+async function apiRequest<T>(path: string, options: RequestInit, timeoutMs = 8000): Promise<T> {
+  if (!apiBaseUrl) throw new Error('API URL is not configured.')
+  let response: Response
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+    })
+  } catch {
+    throw new Error('Could not reach the API. Check your connection and try again.')
+  }
+  const body = await response.json()
+  if (!response.ok) {
+    const message = body?.detail?.message
+    throw new Error(typeof message === 'string' ? message : 'The request failed. Please try again.')
+  }
+  return body as T
+}
+
+export function syncCodeforces(handle: string, mode: 'refresh' | 'continue' = 'refresh') {
+  return apiRequest<SyncResponse>('/codeforces/sync', {
+    method: 'POST',
+    body: JSON.stringify({ handle, mode }),
+  }, 120000)
+}
+
+export function getCodeforcesSummary(handle: string) {
+  return apiRequest<CodeforcesSummary>(
+    `/codeforces/users/${encodeURIComponent(handle)}/summary`, { method: 'GET' },
+  )
 }
