@@ -1,0 +1,47 @@
+from datetime import datetime
+
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class CodeforcesUser(Base):
+    __tablename__ = "codeforces_users"
+
+    handle_key: Mapped[str] = mapped_column(String(24), primary_key=True)
+    handle: Mapped[str] = mapped_column(String(24), nullable=False)
+    rating: Mapped[int | None] = mapped_column(Integer)
+    rank: Mapped[str | None] = mapped_column(String(40))
+    avatar_url: Mapped[str | None] = mapped_column(String(500))
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_from: Mapped[int | None] = mapped_column(Integer)
+
+
+class Problem(Base):
+    __tablename__ = "codeforces_problems"
+
+    contest_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    problem_index: Mapped[str] = mapped_column(String(10), primary_key=True)
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    rating: Mapped[int | None] = mapped_column(Integer)
+    tags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    solved_count: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Submission(Base):
+    __tablename__ = "codeforces_submissions"
+
+    submission_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    handle_key: Mapped[str] = mapped_column(
+        String(24), ForeignKey("codeforces_users.handle_key"), primary_key=True
+    )
+    contest_id: Mapped[int | None] = mapped_column(Integer)
+    problem_index: Mapped[str] = mapped_column(String(10), nullable=False)
+    verdict: Mapped[str | None] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    rating_at_import: Mapped[int | None] = mapped_column(Integer)
+    tags_at_import: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)

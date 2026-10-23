@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/codeforces/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Codeforces */
+        post: operations["sync_codeforces_codeforces_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/codeforces/users/{handle}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Codeforces Summary */
+        get: operations["codeforces_summary_codeforces_users__handle__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -42,6 +76,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -63,6 +102,96 @@ export interface components {
              */
             status: "ok" | "unavailable";
         };
+        /** SolvedProblem */
+        SolvedProblem: {
+            /** Contest Id */
+            contest_id: number;
+            /** Name */
+            name: string;
+            /** Problem Index */
+            problem_index: string;
+            /** Rating */
+            rating: number | null;
+            /**
+             * Solved At
+             * Format: date-time
+             */
+            solved_at: string;
+            /** Tags */
+            tags: string[];
+            /** Url */
+            url: string;
+        };
+        /** SummaryResponse */
+        SummaryResponse: {
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Handle */
+            handle: string;
+            /** Has More */
+            has_more: boolean;
+            /** Rank */
+            rank: string | null;
+            /** Rating */
+            rating: number | null;
+            /** Solved Count */
+            solved_count: number;
+            /** Solved Problems */
+            solved_problems: components["schemas"]["SolvedProblem"][];
+            /** Synced At */
+            synced_at: string | null;
+            /** Topic Distribution */
+            topic_distribution: components["schemas"]["TopicCount"][];
+            /** Total Submissions */
+            total_submissions: number;
+        };
+        /** SyncRequest */
+        SyncRequest: {
+            /** Handle */
+            handle: string;
+            /**
+             * Mode
+             * @default refresh
+             * @enum {string}
+             */
+            mode: "refresh" | "continue";
+        };
+        /** SyncResponse */
+        SyncResponse: {
+            /** Handle */
+            handle: string;
+            /** Has More */
+            has_more: boolean;
+            /** New Submissions */
+            new_submissions: number;
+            /**
+             * Synced At
+             * Format: date-time
+             */
+            synced_at: string;
+            /** Total Submissions */
+            total_submissions: number;
+        };
+        /** TopicCount */
+        TopicCount: {
+            /** Solved Count */
+            solved_count: number;
+            /** Topic */
+            topic: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -72,6 +201,70 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    sync_codeforces_codeforces_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    codeforces_summary_codeforces_users__handle__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;

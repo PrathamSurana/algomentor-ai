@@ -1,7 +1,9 @@
 from functools import lru_cache
 
+from fastapi import HTTPException
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 from app.config import get_settings
 
@@ -21,3 +23,15 @@ def check_database() -> bool:
         return True
     except Exception:
         return False
+
+
+def get_session():
+    try:
+        engine = get_engine()
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "database_unavailable", "message": "Database is not configured"},
+        ) from exc
+    with Session(engine) as session:
+        yield session

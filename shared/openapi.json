@@ -1,6 +1,19 @@
 {
   "components": {
     "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -40,6 +53,270 @@
         ],
         "title": "ReadinessResponse",
         "type": "object"
+      },
+      "SolvedProblem": {
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "problem_index": {
+            "title": "Problem Index",
+            "type": "string"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "solved_at": {
+            "format": "date-time",
+            "title": "Solved At",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contest_id",
+          "problem_index",
+          "name",
+          "rating",
+          "tags",
+          "solved_at",
+          "url"
+        ],
+        "title": "SolvedProblem",
+        "type": "object"
+      },
+      "SummaryResponse": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "solved_count": {
+            "title": "Solved Count",
+            "type": "integer"
+          },
+          "solved_problems": {
+            "items": {
+              "$ref": "#/components/schemas/SolvedProblem"
+            },
+            "title": "Solved Problems",
+            "type": "array"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "topic_distribution": {
+            "items": {
+              "$ref": "#/components/schemas/TopicCount"
+            },
+            "title": "Topic Distribution",
+            "type": "array"
+          },
+          "total_submissions": {
+            "title": "Total Submissions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "handle",
+          "rating",
+          "rank",
+          "avatar_url",
+          "synced_at",
+          "has_more",
+          "total_submissions",
+          "solved_count",
+          "topic_distribution",
+          "solved_problems"
+        ],
+        "title": "SummaryResponse",
+        "type": "object"
+      },
+      "SyncRequest": {
+        "properties": {
+          "handle": {
+            "maxLength": 24,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+            "title": "Handle",
+            "type": "string"
+          },
+          "mode": {
+            "default": "refresh",
+            "enum": [
+              "refresh",
+              "continue"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "handle"
+        ],
+        "title": "SyncRequest",
+        "type": "object"
+      },
+      "SyncResponse": {
+        "properties": {
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "new_submissions": {
+            "title": "New Submissions",
+            "type": "integer"
+          },
+          "synced_at": {
+            "format": "date-time",
+            "title": "Synced At",
+            "type": "string"
+          },
+          "total_submissions": {
+            "title": "Total Submissions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "handle",
+          "new_submissions",
+          "total_submissions",
+          "has_more",
+          "synced_at"
+        ],
+        "title": "SyncResponse",
+        "type": "object"
+      },
+      "TopicCount": {
+        "properties": {
+          "solved_count": {
+            "title": "Solved Count",
+            "type": "integer"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "solved_count"
+        ],
+        "title": "TopicCount",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       }
     }
   },
@@ -49,6 +326,92 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/codeforces/sync": {
+      "post": {
+        "operationId": "sync_codeforces_codeforces_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Codeforces",
+        "tags": [
+          "codeforces"
+        ]
+      }
+    },
+    "/codeforces/users/{handle}/summary": {
+      "get": {
+        "operationId": "codeforces_summary_codeforces_users__handle__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+              "title": "Handle",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Codeforces Summary",
+        "tags": [
+          "codeforces"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",

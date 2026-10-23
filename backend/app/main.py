@@ -4,6 +4,7 @@ from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.codeforces_routes import router as codeforces_router
 from app.config import get_settings
 from app.database import check_database
 
@@ -16,8 +17,10 @@ class ReadinessResponse(BaseModel):
     status: Literal["ok", "unavailable"]
     database: Literal["connected", "unavailable"]
 
+
 settings = get_settings()
 app = FastAPI(title="AlgoMentor AI API", version="0.1.0")
+app.include_router(codeforces_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
