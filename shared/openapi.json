@@ -1,6 +1,29 @@
 {
   "components": {
     "schemas": {
+      "ComplexityEstimate": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Estimate",
+            "type": "string"
+          },
+          "reasoning": {
+            "maxLength": 1200,
+            "minLength": 1,
+            "title": "Reasoning",
+            "type": "string"
+          }
+        },
+        "required": [
+          "estimate",
+          "reasoning"
+        ],
+        "title": "ComplexityEstimate",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -354,6 +377,279 @@
           "recommendations"
         ],
         "title": "RecommendationsResponse",
+        "type": "object"
+      },
+      "ReviewDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "contest_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contest Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/ReviewFeedback"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "enum": [
+              "python",
+              "cpp",
+              "java"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "problem_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Context"
+          },
+          "problem_index": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Index"
+          },
+          "problem_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Title"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "code",
+          "problem_context",
+          "contest_id",
+          "problem_index",
+          "problem_title",
+          "feedback",
+          "provider",
+          "model",
+          "created_at"
+        ],
+        "title": "ReviewDetail",
+        "type": "object"
+      },
+      "ReviewFeedback": {
+        "additionalProperties": false,
+        "properties": {
+          "approach_summary": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Approach Summary",
+            "type": "string"
+          },
+          "potential_edge_cases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Potential Edge Cases",
+            "type": "array"
+          },
+          "space_complexity": {
+            "$ref": "#/components/schemas/ComplexityEstimate"
+          },
+          "suggested_improvements": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Suggested Improvements",
+            "type": "array"
+          },
+          "time_complexity": {
+            "$ref": "#/components/schemas/ComplexityEstimate"
+          },
+          "uncertainty_notes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Uncertainty Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "approach_summary",
+          "time_complexity",
+          "space_complexity",
+          "potential_edge_cases",
+          "suggested_improvements",
+          "uncertainty_notes"
+        ],
+        "title": "ReviewFeedback",
+        "type": "object"
+      },
+      "ReviewHistory": {
+        "properties": {
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewSummary"
+            },
+            "title": "Reviews",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reviews"
+        ],
+        "title": "ReviewHistory",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 20000,
+            "minLength": 20,
+            "title": "Code",
+            "type": "string"
+          },
+          "contest_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contest Id"
+          },
+          "language": {
+            "enum": [
+              "python",
+              "cpp",
+              "java"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "problem_context": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Context"
+          },
+          "problem_index": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z][A-Za-z0-9]{0,9}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Index"
+          }
+        },
+        "required": [
+          "language",
+          "code"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
+      "ReviewSummary": {
+        "properties": {
+          "approach_summary": {
+            "title": "Approach Summary",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "enum": [
+              "python",
+              "cpp",
+              "java"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "problem_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Title"
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "problem_title",
+          "created_at",
+          "approach_summary"
+        ],
+        "title": "ReviewSummary",
         "type": "object"
       },
       "RoadmapResponse": {
@@ -1124,6 +1420,148 @@
         "summary": "Ready",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/reviews": {
+      "get": {
+        "operationId": "list_reviews_reviews_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reviews",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "post": {
+        "operationId": "create_review_reviews_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/reviews/{review_id}": {
+      "get": {
+        "operationId": "get_review_reviews__review_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Review Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Review",
+        "tags": [
+          "reviews"
         ]
       }
     },

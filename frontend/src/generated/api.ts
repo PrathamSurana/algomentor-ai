@@ -106,6 +106,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reviews */
+        get: operations["list_reviews_reviews_get"];
+        put?: never;
+        /** Create Review */
+        post: operations["create_review_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review */
+        get: operations["get_review_reviews__review_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roadmap": {
         parameters: {
             query?: never;
@@ -144,6 +179,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ComplexityEstimate */
+        ComplexityEstimate: {
+            /** Estimate */
+            estimate: string;
+            /** Reasoning */
+            reasoning: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -264,6 +306,95 @@ export interface components {
             target_rating_source: string | null;
             /** Version */
             version: string;
+        };
+        /** ReviewDetail */
+        ReviewDetail: {
+            /** Code */
+            code: string;
+            /** Contest Id */
+            contest_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            feedback: components["schemas"]["ReviewFeedback"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "python" | "cpp" | "java";
+            /** Model */
+            model: string;
+            /** Problem Context */
+            problem_context: string | null;
+            /** Problem Index */
+            problem_index: string | null;
+            /** Problem Title */
+            problem_title: string | null;
+            /** Provider */
+            provider: string;
+        };
+        /** ReviewFeedback */
+        ReviewFeedback: {
+            /** Approach Summary */
+            approach_summary: string;
+            /** Potential Edge Cases */
+            potential_edge_cases: string[];
+            space_complexity: components["schemas"]["ComplexityEstimate"];
+            /** Suggested Improvements */
+            suggested_improvements: string[];
+            time_complexity: components["schemas"]["ComplexityEstimate"];
+            /** Uncertainty Notes */
+            uncertainty_notes: string[];
+        };
+        /** ReviewHistory */
+        ReviewHistory: {
+            /** Reviews */
+            reviews: components["schemas"]["ReviewSummary"][];
+        };
+        /** ReviewRequest */
+        ReviewRequest: {
+            /** Code */
+            code: string;
+            /** Contest Id */
+            contest_id?: number | null;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "python" | "cpp" | "java";
+            /** Problem Context */
+            problem_context?: string | null;
+            /** Problem Index */
+            problem_index?: string | null;
+        };
+        /** ReviewSummary */
+        ReviewSummary: {
+            /** Approach Summary */
+            approach_summary: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "python" | "cpp" | "java";
+            /** Problem Title */
+            problem_title: string | null;
         };
         /** RoadmapResponse */
         RoadmapResponse: {
@@ -621,6 +752,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
+    list_reviews_reviews_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_review_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_reviews__review_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

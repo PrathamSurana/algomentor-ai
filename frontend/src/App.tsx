@@ -4,6 +4,7 @@ import { getServiceState, type ServiceState } from './api'
 import CodeforcesPanel from './CodeforcesPanel'
 import RecommendationsPage from './RecommendationsPage'
 import RoadmapPage from './RoadmapPage'
+import ReviewPage from './ReviewPage'
 
 type Section = 'overview' | 'problems' | 'roadmap' | 'review'
 
@@ -51,14 +52,10 @@ function App() {
         {section === 'overview' && <CodeforcesPanel />}
         {section === 'problems' && <RecommendationsPage onOpenOverview={() => setSection('overview')} />}
         {section === 'roadmap' && <RoadmapPage onOpenOverview={() => setSection('overview')} />}
-        {section === 'review' && <EmptySection title="Code review" description="AI feedback on pasted solutions will appear here in a later milestone." icon={Code2} />}
+          {section === 'review' && <ReviewPage />}
       </main>
     </div>
   </div>
-}
-
-function EmptySection({ title, description, icon: Icon }: { title: string; description: string; icon: typeof Map }) {
-  return <section className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.025] px-6 py-12 text-center"><span className="flex size-14 items-center justify-center rounded-2xl bg-indigo-400/10 text-indigo-300"><Icon size={26} /></span><h2 className="mt-5 text-xl font-semibold">{title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-slate-400">{description}</p></section>
 }
 
 export default App

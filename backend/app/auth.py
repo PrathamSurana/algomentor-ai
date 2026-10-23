@@ -18,7 +18,7 @@ def get_current_user(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=401,
-            detail={"code": "auth_required", "message": "Sign in to save roadmap progress"},
+            detail={"code": "auth_required", "message": "Sign in to access saved work"},
         )
     settings = get_settings()
     if not settings.supabase_url or not settings.supabase_publishable_key:

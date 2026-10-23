@@ -1,12 +1,13 @@
 # AlgoMentor AI
 
-AlgoMentor AI is a DSA and competitive programming coach in development. It imports **public** Codeforces history, displays skill estimates and unsolved problem recommendations, and tracks a prerequisite-based DSA/CP roadmap for signed-in users. The rules and later coaching architecture are in [docs/architecture.md](docs/architecture.md).
+AlgoMentor AI is a DSA and competitive programming coach in development. It imports **public** Codeforces history, displays skill estimates and unsolved problem recommendations, tracks a prerequisite-based DSA/CP roadmap, and reviews user-pasted code with an AI provider. The architecture is in [docs/architecture.md](docs/architecture.md).
 
 ## Prerequisites
 
 - Node.js 20.19+ or 22.12+ and npm 10+
 - Python 3.10+ and `make`
-- A Supabase project with PostgreSQL, a publishable key, and Email Auth enabled for persistent roadmap progress
+- A Supabase project with PostgreSQL, a publishable key, and Email Auth enabled for persistent roadmap progress and review history
+- A Gemini or OpenAI API key for code reviews
 
 ## Local setup
 
@@ -24,7 +25,9 @@ Run these commands from the repository root. The health endpoint works without S
 
 2. Edit `backend/.env`. Replace `DATABASE_URL` with the Supabase **Session pooler** connection URI from the Supabase dashboard. Change the scheme from `postgresql://` to `postgresql+psycopg://` and add `?sslmode=require` (or `&sslmode=require` if the URI already has query parameters). URL-encode special characters in the password. The placeholder URI in `.env.example` is intentionally unusable. Keep this file local; it is gitignored.
 
-   In the Supabase SQL Editor, run the full contents of `backend/migrations/001_codeforces.sql`, then `backend/migrations/002_roadmap.sql`. This creates the public Codeforces tables and the user-owned roadmap progress table. Both migrations enable row-level security with no browser policies; FastAPI uses the server-side database connection. The application does not create tables automatically. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env` to your project's values.
+   In the Supabase SQL Editor, run the full contents of `backend/migrations/001_codeforces.sql`, then `backend/migrations/002_roadmap.sql`, then `backend/migrations/003_code_reviews.sql`. These create the public Codeforces tables and user-owned roadmap and review tables. All migrations enable row-level security with no browser policies; FastAPI uses the server-side database connection. The application does not create tables automatically. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env` to your project's values.
+
+   To enable reviews, set `AI_PROVIDER=gemini` and `GEMINI_API_KEY`, or `AI_PROVIDER=openai` and `OPENAI_API_KEY` in `backend/.env`. `GEMINI_MODEL` and `OPENAI_MODEL` select the provider model. Use a model that supports structured JSON output; the example file includes defaults. Restart FastAPI after editing `.env`. These keys must remain on the backend.
 
 3. Install the frontend:
 
@@ -63,6 +66,12 @@ Open **Roadmap**, enter your email, and follow the Supabase magic link. Return t
 
 The twelve milestones and their prerequisite graph are versioned in `backend/app/roadmap_engine.py`. Codeforces has direct tags for some topics. Arrays, hashing, recursion, linked lists, stacks, and queues use broader tag proxies; the UI labels those estimates as proxies. Missing proficiency evidence leaves a milestone's score blank and does not block progress once prerequisites are complete.
 
+## AI code review
+
+Open **Code review**, sign in with the same Supabase email flow, choose Python, C++, or Java, paste a solution, and click **Review my code**. You can optionally enter a Codeforces contest ID and problem index that exists in the saved catalog; the backend includes its public title, rating, and tags in the provider prompt. You can also paste up to 4,000 characters of problem notes or constraints. Code is limited to 20,000 characters and must contain at least 20 characters. The backend sends the source as text to the configured provider, validates its structured JSON response, and saves the feedback and source code to the signed-in user's history. It never executes the submitted code. Feedback is advisory and may be wrong; verify suggestions against the original problem and your own tests.
+
+`POST /reviews` requires a Supabase bearer token and accepts `language`, `code`, optional `problem_context`, and optional paired `contest_id` and `problem_index`. `GET /reviews?limit=20` lists the current user's reviews, and `GET /reviews/{id}` returns one review with its saved code and feedback. Bad input returns 422, unknown catalog problems return 404, and provider configuration, network, or invalid-response failures return a structured 502/503 error. Provider errors do not save partial reviews. The backend retries transient provider failures up to three attempts. Review source code is stored in PostgreSQL; users should paste only code they are authorized to send to the configured AI provider.
+
 The backend spaces official API calls by at least 2.1 seconds in its single process and retries transient failures up to three times. Deploy one API worker for this in-process limiter; multiple workers require a shared limiter. The problem catalog refreshes at most once every 24 hours. The integration uses only Codeforces' [public API methods](https://codeforces.com/apiHelp/methods) and does not request source code. Codeforces routes remain public and contain only public data; roadmap progress routes require Supabase Auth.
 
 ## Development commands
@@ -82,6 +91,6 @@ The backend is the source of truth for the API contract. The frontend imports ge
 
 - Vercel: use `frontend` as the root directory, `npm run build` as the build command, and `dist` as the output directory. Set `VITE_API_BASE_URL` to the hosted FastAPI origin.
 - FastAPI: build `backend/Dockerfile` on an independent container host. Set `FRONTEND_ORIGIN` to the exact Vercel origin and provide `DATABASE_URL` as a server-side secret.
-- Apply both SQL migrations in order. The readiness check runs only `SELECT 1`; it does not verify migrations. Configure the production Vercel origin in Supabase Auth redirect URLs and set matching public/backend Supabase variables.
+- Apply all three SQL migrations in order. The readiness check runs only `SELECT 1`; it does not verify migrations. Configure the production Vercel origin in Supabase Auth redirect URLs and set matching public/backend Supabase variables. Set the AI provider and API key as backend environment variables to enable reviews.
 
-AI feedback, when implemented, will be advisory and may be incorrect. Tests use mocked Codeforces responses and do not verify a live account or network connection.
+AI feedback is advisory and may be incorrect. Provider and Codeforces tests use mocked responses; they do not verify a live provider, account, or network connection.

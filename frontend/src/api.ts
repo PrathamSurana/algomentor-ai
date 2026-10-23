@@ -7,6 +7,9 @@ export type SyncResponse = components['schemas']['SyncResponse']
 export type SkillAssessment = components['schemas']['SkillAssessmentResponse']
 export type RecommendationsResponse = components['schemas']['RecommendationsResponse']
 export type RoadmapResponse = components['schemas']['RoadmapResponse']
+export type ReviewRequest = components['schemas']['ReviewRequest']
+export type ReviewDetail = components['schemas']['ReviewDetail']
+export type ReviewHistory = components['schemas']['ReviewHistory']
 
 export type ServiceState =
   | { kind: 'loading' }
@@ -110,5 +113,23 @@ export function updateRoadmapMilestone(
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ completed }),
+  })
+}
+
+export function createReview(token: string, input: ReviewRequest) {
+  return apiRequest<ReviewDetail>('/reviews', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(input),
+  }, 75000)
+}
+
+export function getReviewHistory(token: string) {
+  return apiRequest<ReviewHistory>('/reviews?limit=20', {
+    method: 'GET', headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function getReview(token: string, id: string) {
+  return apiRequest<ReviewDetail>(`/reviews/${encodeURIComponent(id)}`, {
+    method: 'GET', headers: { Authorization: `Bearer ${token}` },
   })
 }

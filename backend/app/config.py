@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_publishable_key: str | None = None
     ai_provider: str = "gemini"
+    gemini_model: str = "gemini-2.5-flash"
+    openai_model: str = "gpt-4o-mini"
     gemini_api_key: str | None = None
     openai_api_key: str | None = None
 

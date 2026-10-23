@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Uuid, func
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -54,5 +54,24 @@ class RoadmapProgress(Base):
     user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     milestone_key: Mapped[str] = mapped_column(String(40), primary_key=True)
     completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class CodeReview(Base):
+    __tablename__ = "code_reviews"
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    language: Mapped[str] = mapped_column(String(10), nullable=False)
+    source_code: Mapped[str] = mapped_column(Text, nullable=False)
+    problem_context: Mapped[str | None] = mapped_column(Text)
+    contest_id: Mapped[int | None] = mapped_column(Integer)
+    problem_index: Mapped[str | None] = mapped_column(String(10))
+    problem_title: Mapped[str | None] = mapped_column(String(300))
+    feedback: Mapped[dict] = mapped_column(JSON, nullable=False)
+    provider: Mapped[str] = mapped_column(String(20), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
