@@ -1,46 +1,90 @@
 # AlgoMentor AI
 
-AlgoMentor AI is a DSA and competitive programming coach in development. It imports **public** Codeforces history, displays skill estimates and unsolved problem recommendations, tracks a prerequisite-based DSA/CP roadmap, and reviews user-pasted code with an AI provider. The architecture is in [docs/architecture.md](docs/architecture.md).
+AlgoMentor AI is a DSA and competitive programming coach. It imports **public** Codeforces history, estimates topic proficiency from deterministic evidence, recommends unsolved problems, tracks a prerequisite-based roadmap, and gives advisory AI feedback on code a user pastes. The MVP is designed for an end-term demo on October 27, 2026.
 
-## Prerequisites
+## Problem and scope
 
-- Node.js 20.19+ or 22.12+ and npm 10+
-- Python 3.10+ and `make`
-- A Supabase project with PostgreSQL, a publishable key, and Email Auth enabled for persistent roadmap progress and review history
-- A Gemini or OpenAI API key for code reviews
+Coding practice is scattered across problem archives, spreadsheets, and personal notes. A learner can see individual Codeforces submissions but has little guidance on weak topics, an appropriate next problem, or a structured path through prerequisites. AlgoMentor AI turns a public history into explainable coaching while letting signed-in users save roadmap progress and code reviews.
+
+The app uses the official public Codeforces API. It does not scrape private submissions, fetch source code, execute pasted code, or claim that an AI review proves correctness. Topic scores require enough evidence and remain blank when history is sparse or incomplete.
+
+## Stack and architecture
+
+| Layer | Technology | Responsibility |
+| --- | --- | --- |
+| Frontend | React, Vite, Tailwind CSS, Recharts | Responsive dashboard and charts |
+| Backend | FastAPI, SQLAlchemy, psycopg | Validation, integrations, scoring, recommendations, persistence |
+| Database and sign-in | Supabase PostgreSQL and Supabase Auth | Public import tables and user-owned progress/reviews |
+| External services | Official Codeforces API; Gemini or OpenAI | Public coding history and structured review feedback |
+| Hosting | Vercel frontend; Render Docker web service | Independent static frontend and Python API |
+
+```text
+Browser ── public reads and Supabase bearer token ──> FastAPI ──> Supabase PostgreSQL
+   │                                              ├──> Supabase Auth token check
+   │                                              ├──> Codeforces public API
+   │                                              └──> Gemini or OpenAI (server-side key)
+   └── Vercel static assets                         Render web service
+```
+
+Codeforces imports are keyed by public handle, while roadmap and review records are keyed by a verified Supabase Auth user ID. FastAPI is the only application path to PostgreSQL; all three SQL migrations enable row-level security without browser table policies. The architecture and deterministic scoring details are in [docs/architecture.md](docs/architecture.md).
+
+## Main user flows
+
+1. **Import history:** Enter a Codeforces handle on Overview. `POST /codeforces/sync` validates it, imports public profile, submissions, and problem metadata, deduplicates submissions, and stores a cursor when more pages remain. The dashboard shows actual distinct solves and a topic chart.
+2. **Assess skills:** The backend computes unique attempts and solves, rated difficulty, observable failures, and recent performance per topic. It returns components, weights, rationale, and confidence. A score is omitted until the import is complete and a topic has at least five attempted problems, three solves, and two rated solves.
+3. **Find problems:** Recommendations exclude stored solved problems and rank eligible catalog problems by weak topic, rating fit, prerequisite readiness, and diversity. Each recommendation links to Codeforces and exposes its feature contributions. Incomplete or unverifiable history withholds recommendations.
+4. **Follow the roadmap:** Sign in with a Supabase email magic link. Twelve DSA/CP milestones unlock when prerequisites are complete; completion is saved per account. Available Codeforces evidence influences the next ready milestone.
+5. **Review code:** Sign in, paste your own Python, C++, or Java solution, and optionally add saved Codeforces problem metadata and notes. The backend sends text to the configured provider, validates the structured JSON feedback, and saves review history. Feedback is advisory and the code is never executed.
+
+## API contract
+
+| Method and path | Purpose | Auth |
+| --- | --- | --- |
+| `GET /health` | Process liveness | No |
+| `GET /health/ready` | PostgreSQL connection and required-table check | No |
+| `POST /codeforces/sync` | Import or continue a public handle | No |
+| `GET /codeforces/users/{handle}/summary` | Saved profile, solves, topic counts | No |
+| `GET /codeforces/users/{handle}/skills` | Explainable topic estimates | No |
+| `GET /codeforces/users/{handle}/recommendations` | Ranked unsolved problems | No |
+| `GET /roadmap`, `PATCH /roadmap/{key}` | Milestones and saved completion | Supabase bearer token |
+| `POST /reviews`, `GET /reviews`, `GET /reviews/{id}` | Create and read saved AI reviews | Supabase bearer token |
+
+FastAPI is the contract source. `make contract` exports `shared/openapi.json` and generates `frontend/src/generated/api.ts`; commit both after API changes. Interactive endpoint documentation is available at `/docs` on the backend.
 
 ## Local setup
 
-Run these commands from the repository root. The health endpoint works without Supabase credentials. To make `/health/ready` return 200, configure the database connection and apply all three existing SQL migrations in step 2. The backend loads `backend/.env` by its file path, independent of the shell's working directory.
+Requirements: Node.js 20.19+ or 22.12+, npm 10+, Python 3.10+, `make`, a Supabase project, and a Gemini or OpenAI key to enable reviews.
 
-1. Install the backend:
+1. Install backend dependencies from the repository root:
 
    ```bash
    cd backend
    python3 -m venv .venv
    .venv/bin/pip install -e '.[dev]'
-   cp .env.example .env
+   cp -n .env.example .env
    cd ..
    ```
 
-2. Edit `backend/.env`. Replace `DATABASE_URL` with the Supabase **Session pooler** connection URI from the project's **Connect** dialog (port 5432). This is the IPv4 option for networks that cannot use Supabase's direct IPv6 endpoint. Copy its host and `postgres.<project-ref>` username exactly; the pooler host cannot be inferred from the project reference. Change the scheme from `postgresql://` to `postgresql+psycopg://` and add `?sslmode=require` (or `&sslmode=require` if the URI already has query parameters). URL-encode special characters in the password. The placeholder URI in `.env.example` is intentionally unusable. Keep this file local; it is gitignored.
+   If `backend/.env` already exists, keep it and edit it; do not overwrite it with the example.
 
-   In the Supabase SQL Editor, run the full contents of `backend/migrations/001_codeforces.sql`, then `backend/migrations/002_roadmap.sql`, then `backend/migrations/003_code_reviews.sql`. These are the project's existing migration process; no Alembic setup is required. They create the public Codeforces tables and user-owned roadmap and review tables. All migrations enable row-level security with no browser policies; FastAPI uses the server-side database connection. The application does not create tables automatically. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env` to your project's values.
+2. In `backend/.env`, set `DATABASE_URL` to the **Session pooler** URI copied from your Supabase project's **Connect** dialog, port 5432. It is the IPv4 option when the direct database endpoint cannot be reached over IPv6. Keep the pooler host and `postgres.<project-ref>` username exactly as shown. Change the scheme to `postgresql+psycopg://`, URL-encode reserved password characters, and add `sslmode=require`. `backend/.env` is loaded relative to the backend source file, so the launch directory does not affect it.
 
-   To enable reviews, set `AI_PROVIDER=gemini` and `GEMINI_API_KEY`, or `AI_PROVIDER=openai` and `OPENAI_API_KEY` in `backend/.env`. `GEMINI_MODEL` and `OPENAI_MODEL` select the provider model. Use a model that supports structured JSON output; the example file includes defaults. Restart FastAPI after editing `.env`. These keys must remain on the backend.
+3. In Supabase's SQL Editor, run these existing migrations **in order**: `backend/migrations/001_codeforces.sql`, `002_roadmap.sql`, and `003_code_reviews.sql`. There is no Alembic setup and tables are not created on app startup. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env`. Enable Email Auth and allow `http://localhost:5173` as a redirect URL in Supabase Auth settings.
 
-3. Install the frontend:
+4. To enable reviews, set `AI_PROVIDER=gemini` with `GEMINI_API_KEY`, or `AI_PROVIDER=openai` with `OPENAI_API_KEY`, in `backend/.env`. `GEMINI_MODEL` and `OPENAI_MODEL` select a model that supports structured JSON output. Keep all provider keys on the backend.
+
+5. Install frontend dependencies and configure its public values:
 
    ```bash
    cd frontend
    npm ci
-   cp .env.example .env.local
+   cp -n .env.example .env.local
    cd ..
    ```
 
-   For local development, `VITE_API_BASE_URL=http://localhost:8000` is already set in the example. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the same Supabase project's public URL and publishable key. In Supabase Auth URL configuration, allow `http://localhost:5173` as a redirect URL; allow your Vercel origin for deployment. Enable email magic-link sign-in. Never put the database URL or an AI API key in a `VITE_` variable.
+   Set `VITE_API_BASE_URL=http://localhost:8000`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_PUBLISHABLE_KEY` in `frontend/.env.local`. Only public configuration belongs in `VITE_` variables. Never put `DATABASE_URL`, provider keys, or a Supabase service-role key there.
 
-4. Start the API and frontend in separate terminals from the repository root:
+6. Start both services in separate terminals:
 
    ```bash
    make dev-api
@@ -50,47 +94,41 @@ Run these commands from the repository root. The health endpoint works without S
    make dev-web
    ```
 
-5. Open `http://localhost:5173`. API docs are at `http://localhost:8000/docs`. Check liveness with `curl http://localhost:8000/health`; check the configured database with `curl -i http://localhost:8000/health/ready`. The readiness response returns 200 only when PostgreSQL accepts the connection and all five tables from migrations 001–003 exist. A 503 response includes a safe `reason` such as `dns_failure`, `authentication_failed`, or `missing_tables`; it never includes credentials. Restart FastAPI after changing `.env`. Enter a public Codeforces handle and click **Sync history**. The dashboard shows the imported submission and distinct solved counts, a topic chart, and the most recent 100 solved problems. If it offers **Load older submissions**, click that to continue the stored pagination cursor.
+   Open `http://localhost:5173`. Check `http://localhost:8000/health` and `http://localhost:8000/health/ready`. Readiness returns 200 only when PostgreSQL accepts the connection and all five required tables exist. A 503 response has a safe reason such as `dns_failure`, `authentication_failed`, or `missing_tables`; it does not include credentials. Restart FastAPI after changing backend environment values.
 
-## Codeforces sync API
+## Environment variables
 
-`POST /codeforces/sync` accepts `{"handle":"tourist","mode":"refresh"}`. Use `mode:"continue"` to fetch older pages after a response with `has_more:true`. `GET /codeforces/users/{handle}/summary` reads saved data and makes no Codeforces request. Handles are validated and normalized case-insensitively; re-syncs upsert submissions and avoid duplicate counts. Each sync imports at most five pages of 1,000 submissions, so large histories need multiple **Load older** actions. A fresh sync starts at the newest page and resets the older-page cursor.
+| File or host | Variable | Meaning |
+| --- | --- | --- |
+| Backend only | `DATABASE_URL` | Supabase PostgreSQL Session pooler URI; secret |
+| Backend only | `FRONTEND_ORIGIN` | Exact allowed Vercel or local origin for CORS |
+| Backend | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Auth token verification |
+| Backend only | `AI_PROVIDER`, `GEMINI_MODEL`, `OPENAI_MODEL` | Provider and model selection |
+| Backend only | `GEMINI_API_KEY` or `OPENAI_API_KEY` | Provider secret |
+| Vercel/frontend | `VITE_API_BASE_URL` | Public FastAPI origin |
+| Vercel/frontend | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | Public Supabase Auth configuration |
 
-`GET /codeforces/users/{handle}/skills` computes versioned topic estimates from saved submissions without calling Codeforces. It returns counts, normalized components, applied weights, confidence, and plain-language rationale. A score is `null` until history import is complete and the topic has at least five distinct attempts, three solves, and two rated solves. The dashboard charts only published estimates and shows insufficient-data states for other topics. Skill scores are advisory estimates, not exact measurements.
-
-`GET /codeforces/users/{handle}/recommendations?limit=8` reads saved problems and performance and returns 5–10 ranked unsolved problems when the catalog has enough eligible entries. Each item includes a direct Codeforces link, a target topic, four numeric ranking contributions, and an explanation. The **Recommendations** page fetches this endpoint after a handle is synced. If older submissions remain, the endpoint returns `history_incomplete` with no recommendations so it cannot present a previously solved problem. `catalog_limited` reports fewer than five eligible problems; `history_unverifiable` means an accepted submission lacks the problem identity needed for safe filtering. Cold-start users receive a starter rating target, and unrated catalog problems have a conservative difficulty fit.
-
-## Roadmap and authentication
-
-Open **Roadmap**, enter your email, and follow the Supabase magic link. Return to Roadmap after sign-in. `GET /roadmap` and `PATCH /roadmap/{milestone_key}` require `Authorization: Bearer <Supabase access token>`. The backend validates that token with the Supabase Auth server before reading or changing progress. The frontend supplies the saved public Codeforces handle as an optional `handle` query parameter so available skill estimates can influence the next ready milestone; progress itself belongs to the signed-in user. `PATCH` accepts `{"completed":true}` or `{"completed":false}`. Locked milestones cannot be completed, and completed prerequisites cannot be reopened while completed descendants depend on them.
-
-The twelve milestones and their prerequisite graph are versioned in `backend/app/roadmap_engine.py`. Codeforces has direct tags for some topics. Arrays, hashing, recursion, linked lists, stacks, and queues use broader tag proxies; the UI labels those estimates as proxies. Missing proficiency evidence leaves a milestone's score blank and does not block progress once prerequisites are complete.
-
-## AI code review
-
-Open **Code review**, sign in with the same Supabase email flow, choose Python, C++, or Java, paste a solution, and click **Review my code**. You can optionally enter a Codeforces contest ID and problem index that exists in the saved catalog; the backend includes its public title, rating, and tags in the provider prompt. You can also paste up to 4,000 characters of problem notes or constraints. Code is limited to 20,000 characters and must contain at least 20 characters. The backend sends the source as text to the configured provider, validates its structured JSON response, and saves the feedback and source code to the signed-in user's history. It never executes the submitted code. Feedback is advisory and may be wrong; verify suggestions against the original problem and your own tests.
-
-`POST /reviews` requires a Supabase bearer token and accepts `language`, `code`, optional `problem_context`, and optional paired `contest_id` and `problem_index`. `GET /reviews?limit=20` lists the current user's reviews, and `GET /reviews/{id}` returns one review with its saved code and feedback. Bad input returns 422, unknown catalog problems return 404, and provider configuration, network, or invalid-response failures return a structured 502/503 error. Provider errors do not save partial reviews. The backend retries transient provider failures up to three attempts. Review source code is stored in PostgreSQL; users should paste only code they are authorized to send to the configured AI provider.
-
-The backend spaces official API calls by at least 2.1 seconds in its single process and retries transient failures up to three times. Deploy one API worker for this in-process limiter; multiple workers require a shared limiter. The problem catalog refreshes at most once every 24 hours. The integration uses only Codeforces' [public API methods](https://codeforces.com/apiHelp/methods) and does not request source code. Codeforces routes remain public and contain only public data; roadmap progress routes require Supabase Auth.
-
-## Development commands
-
-| Command | Action |
-| --- | --- |
-| `make dev-api` | Start FastAPI with reload on port 8000. |
-| `make dev-web` | Start Vite on port 5173. |
-| `make contract` | Export FastAPI OpenAPI to `shared/openapi.json` and regenerate `frontend/src/generated/api.ts`. Run after changing response models or routes. |
-| `make lint` | Run Ruff and ESLint. |
-| `make test` | Run backend route tests. |
-| `make build` | Type-check and build the frontend. |
-
-The backend is the source of truth for the API contract. The frontend imports generated response types from `frontend/src/generated/api.ts`. Commit both generated files when the API changes.
+`backend/.env` and `frontend/.env.local` are gitignored. The Docker build context excludes local environment files and virtual environments. Review source code is stored in PostgreSQL and sent to the chosen AI provider, so submit only code you are authorized to share.
 
 ## Deployment
 
-- Vercel: use `frontend` as the root directory, `npm run build` as the build command, and `dist` as the output directory. Set `VITE_API_BASE_URL` to the hosted FastAPI origin.
-- FastAPI: build `backend/Dockerfile` on an independent container host. Set `FRONTEND_ORIGIN` to the exact Vercel origin and provide `DATABASE_URL` as a server-side secret.
-- Apply all three SQL migrations in order. The readiness check verifies the connection and required table names. Configure the production Vercel origin in Supabase Auth redirect URLs and set matching public/backend Supabase variables. Set the AI provider and API key as backend environment variables to enable reviews.
+1. Apply migrations 001–003 in the Supabase SQL Editor. Copy the Session pooler URI from Supabase Connect. [Supabase connection guidance](https://supabase.com/docs/guides/database/connecting-to-postgres) explains direct IPv6 and pooler IPv4 endpoints.
+2. Create a Render Blueprint from this repository's root `render.yaml`. It builds `backend/Dockerfile` with `backend` as Docker context and checks `/health/ready`. Set the prompted `DATABASE_URL`, `FRONTEND_ORIGIN`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `GEMINI_API_KEY` in Render. The Blueprint defaults to Gemini; for OpenAI, set `AI_PROVIDER=openai` and `OPENAI_API_KEY` in Render instead. The Docker command binds to Render's `PORT` and runs one worker, preserving the in-process Codeforces request limiter. [Render Blueprint reference](https://render.com/docs/blueprint-spec).
+3. Create a Vercel project from this repository with **Root Directory `frontend`**. `frontend/vercel.json` configures the Vite build, `dist` output, and SPA rewrites. Set `VITE_API_BASE_URL` to the HTTPS Render origin, and set the two public `VITE_SUPABASE_*` values. Redeploy after changing `VITE_` variables because Vite embeds them at build time. [Vercel Vite guide](https://vercel.com/docs/frameworks/frontend/vite).
+4. Set Render `FRONTEND_ORIGIN` to the exact production Vercel origin and redeploy the backend. Add that origin to Supabase Auth's allowed redirect URLs. Test `/health/ready`, a public Codeforces sync, email sign-in, a roadmap update, and a review on the deployed URLs before presenting the demo.
 
-AI feedback is advisory and may be incorrect. Provider and Codeforces tests use mocked responses; they do not verify a live provider, account, or network connection.
+Only the production Vercel origin is allowed by the current single-origin CORS setting; preview URLs need their own configured origin or a deliberate CORS change. Render health checks will fail until the database is reachable and migrations are applied.
+
+## Development and verification
+
+| Command | Action |
+| --- | --- |
+| `make dev-api` / `make dev-web` | Start local FastAPI / Vite |
+| `make contract` | Regenerate OpenAPI and TypeScript types |
+| `make test` | Backend unit and mocked integration tests |
+| `make lint` | Ruff and ESLint |
+| `make build` | Type-check and build frontend |
+
+The tests use mocked Codeforces and AI responses; they are never presented as live data. Route tests exercise persistence across SQLAlchemy sessions with SQLite fixtures. Live PostgreSQL, Supabase Auth, provider calls, and hosted deployment must be checked with real configuration. The backend retries transient Codeforces and AI failures. The Codeforces limiter is process-local, so the Render configuration uses one API worker.
+
+See [docs/demo.md](docs/demo.md) for a 3–5 minute walkthrough and an honest fallback if a live dependency is unavailable.

@@ -2,7 +2,7 @@
 
 Target: deployable end-term project by October 27, 2026.
 
-Current build: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. `POST /codeforces/sync` imports a public handle; `GET /codeforces/users/{handle}/summary` serves persisted solved problems and topic counts; `GET /codeforces/users/{handle}/skills` returns the deterministic assessment; `GET /codeforces/users/{handle}/recommendations` ranks unsolved catalog problems. Authenticated roadmap and review routes manage persistent milestone completion and AI feedback history. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`.
+Current build: `GET /health` reports process liveness and `GET /health/ready` checks PostgreSQL and the five required tables. `POST /codeforces/sync` imports a public handle; the summary, skills, and recommendations routes serve saved data. Authenticated roadmap and review routes manage milestone completion and AI feedback history. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`.
 
 The Codeforces migration creates `codeforces_users`, `codeforces_problems`, and `codeforces_submissions`. These tables intentionally hold only public data keyed by the Codeforces handle. Migration 002 adds `roadmap_progress` keyed by Supabase Auth user ID and milestone key. Migration 003 adds `code_reviews` with code, optional problem context, provider metadata, and validated JSON feedback, keyed to a Supabase Auth user. The backend verifies the access token through Supabase Auth before serving or changing user-owned data. The dashboard's topic distribution is a distinct accepted-problem count per Codeforces tag; the skill assessment endpoint provides deterministic estimates from that history.
 
@@ -17,31 +17,32 @@ Browser (React/Vite) --Supabase Auth session--> FastAPI --SQL--> Supabase Postgr
 
 The browser uses Supabase Auth for email sign-in and sends its access token as `Authorization: Bearer`. FastAPI validates the token with Supabase Auth before accessing any user data. SQL access, Codeforces imports, scoring, recommendations, and AI calls all run on the backend. CORS allows only configured frontend origins. The database is accessed through a server-only connection string.
 
-Codeforces imports use official public `user.info`, `user.status`, and `problemset.problems` methods. Requests are paced to respect the documented one-call-per-two-seconds limit; retryable failures use bounded backoff. Import pagination stops after reaching already-stored submission IDs or the end of history, with a documented per-sync safety cap. Upserts make retries safe. The problem catalog is refreshed separately and shared by all users.
+Codeforces imports use official public `user.info`, `user.status`, and `problemset.problems` methods. Requests are paced to respect the documented one-call-per-two-seconds limit; retryable failures use bounded backoff. Each sync imports at most five pages of 1,000 submissions and stores a cursor when older pages remain. Upserts make retries safe. The shared problem catalog refreshes during a sync when its saved data is older than 24 hours.
 
-## Future coaching schema
+## Database schema
 
-The table below records earlier ideas that remain outside the MVP. The implemented tables live in migrations 001, 002, and 003.
+The implemented tables live in migrations 001, 002, and 003. There is no migration framework beyond these ordered SQL files.
 
 | Table | Key fields | Constraints and purpose |
 | --- | --- | --- |
-| `profiles` | `user_id uuid`, `codeforces_handle text`, `last_synced_at timestamptz`, `sync_status text` | `user_id` references `auth.users`; handle is unique case-insensitively so one account cannot be connected to multiple profiles. |
-| `problems` | `contest_id int`, `problem_index text`, `name text`, `rating int?`, `tags text[]`, `solved_count int?`, `updated_at timestamptz` | Primary key `(contest_id, problem_index)`; unrated problems remain visible but are excluded from rating-matched recommendations. |
-| `submissions` | `submission_id bigint`, `user_id uuid`, `contest_id int?`, `problem_index text`, `verdict text?`, `created_at timestamptz`, `rating_at_import int?`, `tags_at_import text[]` | Primary key `submission_id`; index on `(user_id, created_at desc)`; snapshots preserve evidence when catalog metadata changes. |
-| `topic_proficiency` | `user_id uuid`, `topic text`, `score numeric`, `confidence text`, `evidence_count int`, `calculated_at timestamptz` | Primary key `(user_id, topic)`; reproducible projection from submissions. |
+| `codeforces_users` | `handle_key`, `handle`, profile fields, `next_from` | Public handle keyed case-insensitively; cursor records older-page pagination. |
+| `codeforces_problems` | `(contest_id, problem_index)`, `name`, `rating`, `tags`, `solved_count` | Shared public problem catalog; rating may be null. |
+| `codeforces_submissions` | `(handle_key, submission_id)`, problem identity, verdict, time, rating/tag snapshots | Public submission history, deduplicated by composite key. |
+| `roadmap_progress` | `(user_id, milestone_key)`, `completed_at` | User-owned completion; `user_id` references `auth.users`. |
+| `code_reviews` | `id`, `user_id`, `language`, `source_code`, `problem_context`, `feedback`, `provider`, `model`, `created_at` | User-owned saved review; `user_id` references `auth.users`. |
 
-Every user-owned query is scoped by the verified `user_id`. Migrations enable row-level security to block direct browser reads of app tables. The backend database role and connection mode will be documented alongside the migration.
+Every user-owned query is scoped by the verified `user_id`. Migrations enable row-level security to block direct browser reads of app tables. The backend uses a server-only Supabase PostgreSQL Session pooler URI.
 
 ## API contract
 
 | Method | Path | Role |
 | --- | --- | --- |
 | GET | `/health` | Liveness; no secrets or user data. |
-| GET | `/me` | Current profile and import status. |
-| PUT | `/me/codeforces` | Validate and connect a public Codeforces handle. |
-| POST | `/imports/codeforces` | Import submissions with deduplication; return count, status, and sync time. |
-| GET | `/dashboard` | Topic scores, confidence, recent activity, and summary. |
-| GET | `/recommendations` | Ranked unsolved problems and rule-based explanations. |
+| GET | `/health/ready` | Connection and migration-table readiness. |
+| POST | `/codeforces/sync` | Import public history with deduplication and cursor. |
+| GET | `/codeforces/users/{handle}/summary` | Saved solves and topic counts. |
+| GET | `/codeforces/users/{handle}/skills` | Explainable topic assessment. |
+| GET | `/codeforces/users/{handle}/recommendations` | Ranked unsolved problems. |
 | GET | `/roadmap` | Ordered milestones with prerequisites and persisted completion. |
 | PATCH | `/roadmap/{key}` | Complete or reopen an eligible milestone. |
 | POST | `/reviews` | Analyze pasted code and return validated structured feedback. |
@@ -60,7 +61,7 @@ No score is published until the full submission history is imported and the topi
 
 Recommendation version 1.0 is implemented in `backend/app/recommendation_engine.py`. The API excludes every stored accepted problem before ranking. It withholds the list while older submission pages remain or an accepted problem lacks a contest ID, because solved-problem filtering cannot then be guaranteed. With complete but empty history, it starts with implementation and math topics at rating 1000. The target rating is the median rating of distinct solved problems plus 100; when none are rated, it uses Codeforces profile rating minus 100; when that is absent, it uses 1000. All targets are clamped to 800–3200.
 
-Each candidate gets up to 35 points for topic priority, 35 for proximity to target rating (falling to zero at a 600-point gap; unrated problems get a conservative fixed fit), 20 for mapped prerequisite readiness, and 10 for diversity. Readiness uses three distinct solves per prerequisite topic as its full-credit threshold. A greedy second pass recalculates diversity after each pick to favor new topics and contests. The response exposes all four numeric contributions and deterministic rationale. The small prerequisite map is a recommendation heuristic until the persistent roadmap exists. If the requested target topics lack enough catalog problems, low-priority catalog tags fill the remaining slots. The API returns 5–10 results when that many eligible tagged, unsolved problems exist, and reports `catalog_limited` otherwise.
+Each candidate gets up to 35 points for topic priority, 35 for proximity to target rating (falling to zero at a 600-point gap; unrated problems get a conservative fixed fit), 20 for mapped prerequisite readiness, and 10 for diversity. Readiness uses three distinct solves per prerequisite topic as its full-credit threshold. A greedy second pass recalculates diversity after each pick to favor new topics and contests. The response exposes all four numeric contributions and deterministic rationale. The recommendation prerequisite map is a small heuristic alongside the persistent roadmap graph. If the requested target topics lack enough catalog problems, low-priority catalog tags fill the remaining slots. The API returns 5–10 results when that many eligible tagged, unsolved problems exist, and reports `catalog_limited` otherwise.
 
 Roadmap version 1.0 is a validated DAG with twelve milestones: arrays, hashing, two pointers, binary search, recursion, linked lists, stacks, queues, trees, graphs, greedy, and dynamic programming. A milestone is locked until all prerequisite keys are completed, ready afterward, and completed when the signed-in user marks it done. The next milestone is the ready item with the lowest available topic proficiency estimate; missing estimates get neutral priority and graph order breaks ties. Broader Codeforces tags used as proxies are labeled. Completion persists per Supabase Auth user and does not disappear after a rescore. Reopening a prerequisite is blocked while a completed descendant depends on it.
 
@@ -76,4 +77,4 @@ Code review accepts Python, C++, or Java source of 20–20,000 characters and up
 
 ## Risks to track
 
-Codeforces rate limits and temporary failures can delay a first import. The shared problem catalog may be large, so it must refresh outside the interactive request path. AI output requires schema validation and clear advisory labeling. A deployable demo needs Supabase, Codeforces access, and one configured AI provider.
+Codeforces rate limits and temporary failures can delay a first import. A catalog refresh during sync can make that request slow. AI output requires schema validation and clear advisory labeling. A full demo needs Supabase Auth, Codeforces access, and one configured AI provider.

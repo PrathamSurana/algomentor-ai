@@ -28,6 +28,7 @@ export default function RecommendationsPage({ onOpenOverview }: { onOpenOverview
   function retry() {
     setLoading(true)
     setError(null)
+    setResult(null)
     setAttempt((value) => value + 1)
   }
 
