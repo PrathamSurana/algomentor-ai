@@ -1,6 +1,7 @@
 from datetime import datetime
+from uuid import UUID
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Uuid, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -45,3 +46,13 @@ class Submission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     rating_at_import: Mapped[int | None] = mapped_column(Integer)
     tags_at_import: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+
+
+class RoadmapProgress(Base):
+    __tablename__ = "roadmap_progress"
+
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    milestone_key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

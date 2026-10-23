@@ -106,6 +106,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roadmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Roadmap */
+        get: operations["get_roadmap_roadmap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roadmap/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Progress */
+        patch: operations["update_progress_roadmap__key__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -122,6 +156,39 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** MilestoneResponse */
+        MilestoneResponse: {
+            /** Completed */
+            completed: boolean;
+            /** Description */
+            description: string;
+            /** Key */
+            key: string;
+            /** Missing Prerequisites */
+            missing_prerequisites: string[];
+            /** Order */
+            order: number;
+            /** Prerequisites */
+            prerequisites: string[];
+            /** Proficiency Confidence */
+            proficiency_confidence: string;
+            /** Proficiency Score */
+            proficiency_score: number | null;
+            /**
+             * Skill Source
+             * @enum {string}
+             */
+            skill_source: "direct" | "proxy" | "none";
+            /** Skill Tag */
+            skill_tag: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "locked" | "ready" | "completed";
+            /** Title */
+            title: string;
         };
         /** ProblemRecommendation */
         ProblemRecommendation: {
@@ -146,6 +213,11 @@ export interface components {
             target_topic: string;
             /** Url */
             url: string;
+        };
+        /** ProgressUpdate */
+        ProgressUpdate: {
+            /** Completed */
+            completed: boolean;
         };
         /** ReadinessResponse */
         ReadinessResponse: {
@@ -190,6 +262,21 @@ export interface components {
             target_rating: number | null;
             /** Target Rating Source */
             target_rating_source: string | null;
+            /** Version */
+            version: string;
+        };
+        /** RoadmapResponse */
+        RoadmapResponse: {
+            /** Completed Count */
+            completed_count: number;
+            /** Milestones */
+            milestones: components["schemas"]["MilestoneResponse"][];
+            /** Recommendation Reason */
+            recommendation_reason: string | null;
+            /** Recommended Key */
+            recommended_key: string | null;
+            /** Total Count */
+            total_count: number;
             /** Version */
             version: string;
         };
@@ -534,6 +621,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
+    get_roadmap_roadmap_get: {
+        parameters: {
+            query?: {
+                handle?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoadmapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_progress_roadmap__key__patch: {
+        parameters: {
+            query?: {
+                handle?: string | null;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoadmapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

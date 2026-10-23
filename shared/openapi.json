@@ -28,6 +28,104 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "MilestoneResponse": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "missing_prerequisites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Prerequisites",
+            "type": "array"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "prerequisites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Prerequisites",
+            "type": "array"
+          },
+          "proficiency_confidence": {
+            "title": "Proficiency Confidence",
+            "type": "string"
+          },
+          "proficiency_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proficiency Score"
+          },
+          "skill_source": {
+            "enum": [
+              "direct",
+              "proxy",
+              "none"
+            ],
+            "title": "Skill Source",
+            "type": "string"
+          },
+          "skill_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Tag"
+          },
+          "state": {
+            "enum": [
+              "locked",
+              "ready",
+              "completed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "description",
+          "prerequisites",
+          "missing_prerequisites",
+          "state",
+          "completed",
+          "proficiency_score",
+          "proficiency_confidence",
+          "skill_tag",
+          "skill_source",
+          "order"
+        ],
+        "title": "MilestoneResponse",
+        "type": "object"
+      },
       "ProblemRecommendation": {
         "properties": {
           "contest_id": {
@@ -110,6 +208,19 @@
           "rationale"
         ],
         "title": "ProblemRecommendation",
+        "type": "object"
+      },
+      "ProgressUpdate": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "completed"
+        ],
+        "title": "ProgressUpdate",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -243,6 +354,61 @@
           "recommendations"
         ],
         "title": "RecommendationsResponse",
+        "type": "object"
+      },
+      "RoadmapResponse": {
+        "properties": {
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneResponse"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "recommendation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Reason"
+          },
+          "recommended_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Key"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "recommended_key",
+          "recommendation_reason",
+          "completed_count",
+          "total_count",
+          "milestones"
+        ],
+        "title": "RoadmapResponse",
         "type": "object"
       },
       "ScoreComponents": {
@@ -707,6 +873,12 @@
         "title": "ValidationError",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -952,6 +1124,141 @@
         "summary": "Ready",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/roadmap": {
+      "get": {
+        "operationId": "get_roadmap_roadmap_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "handle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 24,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handle"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoadmapResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Roadmap",
+        "tags": [
+          "roadmap"
+        ]
+      }
+    },
+    "/roadmap/{key}": {
+      "patch": {
+        "operationId": "update_progress_roadmap__key__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 40,
+              "minLength": 1,
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "handle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 24,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handle"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoadmapResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Progress",
+        "tags": [
+          "roadmap"
         ]
       }
     }
