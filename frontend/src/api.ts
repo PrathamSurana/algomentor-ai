@@ -6,6 +6,7 @@ export type CodeforcesSummary = components['schemas']['SummaryResponse']
 export type SyncResponse = components['schemas']['SyncResponse']
 export type SkillAssessment = components['schemas']['SkillAssessmentResponse']
 export type RecommendationsResponse = components['schemas']['RecommendationsResponse']
+export type RoadmapResponse = components['schemas']['RoadmapResponse']
 
 export type ServiceState =
   | { kind: 'loading' }
@@ -90,4 +91,24 @@ export function getRecommendations(handle: string, limit = 8) {
     `/codeforces/users/${encodeURIComponent(handle)}/recommendations?limit=${limit}`,
     { method: 'GET' },
   )
+}
+
+function roadmapPath(handle?: string | null) {
+  return handle ? `?handle=${encodeURIComponent(handle)}` : ''
+}
+
+export function getRoadmap(token: string, handle?: string | null) {
+  return apiRequest<RoadmapResponse>(`/roadmap${roadmapPath(handle)}`, {
+    method: 'GET', headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function updateRoadmapMilestone(
+  token: string, key: string, completed: boolean, handle?: string | null,
+) {
+  return apiRequest<RoadmapResponse>(`/roadmap/${encodeURIComponent(key)}${roadmapPath(handle)}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ completed }),
+  })
 }

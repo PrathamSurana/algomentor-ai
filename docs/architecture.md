@@ -2,9 +2,9 @@
 
 Target: deployable end-term project by October 27, 2026.
 
-Current build: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. `POST /codeforces/sync` imports a public handle; `GET /codeforces/users/{handle}/summary` serves persisted solved problems and topic counts; `GET /codeforces/users/{handle}/skills` returns the deterministic assessment; `GET /codeforces/users/{handle}/recommendations` ranks unsolved catalog problems. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Other product routes below remain planned.
+Current build: `GET /health` reports process liveness and `GET /health/ready` reports database connectivity. `POST /codeforces/sync` imports a public handle; `GET /codeforces/users/{handle}/summary` serves persisted solved problems and topic counts; `GET /codeforces/users/{handle}/skills` returns the deterministic assessment; `GET /codeforces/users/{handle}/recommendations` ranks unsolved catalog problems. Authenticated `GET /roadmap` and `PATCH /roadmap/{key}` manage persistent milestone completion. The shared contract is `shared/openapi.json`, generated from FastAPI, with TypeScript types in `frontend/src/generated/api.ts`. Other product routes below remain planned.
 
-The current Codeforces migration creates `codeforces_users`, `codeforces_problems`, and `codeforces_submissions`. These tables intentionally hold only public data keyed by the Codeforces handle. Supabase Auth linkage and user-owned coaching tables are later milestones. The dashboard's topic distribution is a distinct accepted-problem count per Codeforces tag. A separate skill assessment endpoint now provides deterministic estimates from that history.
+The Codeforces migration creates `codeforces_users`, `codeforces_problems`, and `codeforces_submissions`. These tables intentionally hold only public data keyed by the Codeforces handle. Migration 002 adds `roadmap_progress` keyed by Supabase Auth user ID and milestone key. The backend verifies the access token through Supabase Auth before serving or changing roadmap progress. The dashboard's topic distribution is a distinct accepted-problem count per Codeforces tag; the skill assessment endpoint provides deterministic estimates from that history.
 
 ## System boundaries
 
@@ -19,7 +19,9 @@ The browser uses Supabase Auth for email sign-in and sends its access token as `
 
 Codeforces imports use official public `user.info`, `user.status`, and `problemset.problems` methods. Requests are paced to respect the documented one-call-per-two-seconds limit; retryable failures use bounded backoff. Import pagination stops after reaching already-stored submission IDs or the end of history, with a documented per-sync safety cap. Upserts make retries safe. The problem catalog is refreshed separately and shared by all users.
 
-## Database schema (planned migration 001)
+## Future coaching schema
+
+The table below records remaining planned user-owned coaching tables. The implemented Codeforces and roadmap tables are described above and live in migrations 001 and 002.
 
 | Table | Key fields | Constraints and purpose |
 | --- | --- | --- |
@@ -27,7 +29,6 @@ Codeforces imports use official public `user.info`, `user.status`, and `problems
 | `problems` | `contest_id int`, `problem_index text`, `name text`, `rating int?`, `tags text[]`, `solved_count int?`, `updated_at timestamptz` | Primary key `(contest_id, problem_index)`; unrated problems remain visible but are excluded from rating-matched recommendations. |
 | `submissions` | `submission_id bigint`, `user_id uuid`, `contest_id int?`, `problem_index text`, `verdict text?`, `created_at timestamptz`, `rating_at_import int?`, `tags_at_import text[]` | Primary key `submission_id`; index on `(user_id, created_at desc)`; snapshots preserve evidence when catalog metadata changes. |
 | `topic_proficiency` | `user_id uuid`, `topic text`, `score numeric`, `confidence text`, `evidence_count int`, `calculated_at timestamptz` | Primary key `(user_id, topic)`; reproducible projection from submissions. |
-| `roadmap_milestones` | `user_id uuid`, `milestone_key text`, `prerequisite_keys text[]`, `status text`, `completed_at timestamptz` | Primary key `(user_id, milestone_key)`; keys map to a versioned prerequisite graph in backend code. |
 | `code_reviews` | `id uuid`, `user_id uuid`, `problem_key text?`, `language text`, `source_code text`, `feedback jsonb`, `created_at timestamptz` | Bounded code length; only the owner can retrieve review history. |
 
 Every user-owned query is scoped by the verified `user_id`. Migrations enable row-level security to block direct browser reads of app tables. The backend database role and connection mode will be documented alongside the migration.
@@ -60,7 +61,7 @@ Recommendation version 1.0 is implemented in `backend/app/recommendation_engine.
 
 Each candidate gets up to 35 points for topic priority, 35 for proximity to target rating (falling to zero at a 600-point gap; unrated problems get a conservative fixed fit), 20 for mapped prerequisite readiness, and 10 for diversity. Readiness uses three distinct solves per prerequisite topic as its full-credit threshold. A greedy second pass recalculates diversity after each pick to favor new topics and contests. The response exposes all four numeric contributions and deterministic rationale. The small prerequisite map is a recommendation heuristic until the persistent roadmap exists. If the requested target topics lack enough catalog problems, low-priority catalog tags fill the remaining slots. The API returns 5–10 results when that many eligible tagged, unsolved problems exist, and reports `catalog_limited` otherwise.
 
-The roadmap is a small, versioned DAG of DSA/CP milestones. Suggested focus follows weak topics while prerequisites control unlocks. Completion is stored per user and does not disappear after a rescore.
+Roadmap version 1.0 is a validated DAG with twelve milestones: arrays, hashing, two pointers, binary search, recursion, linked lists, stacks, queues, trees, graphs, greedy, and dynamic programming. A milestone is locked until all prerequisite keys are completed, ready afterward, and completed when the signed-in user marks it done. The next milestone is the ready item with the lowest available topic proficiency estimate; missing estimates get neutral priority and graph order breaks ties. Broader Codeforces tags used as proxies are labeled. Completion persists per Supabase Auth user and does not disappear after a rescore. Reopening a prerequisite is blocked while a completed descendant depends on it.
 
 ## Milestones
 

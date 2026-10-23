@@ -3,6 +3,7 @@ import { CheckCircle2, CircleAlert, Code2, Database, LayoutDashboard, LoaderCirc
 import { getServiceState, type ServiceState } from './api'
 import CodeforcesPanel from './CodeforcesPanel'
 import RecommendationsPage from './RecommendationsPage'
+import RoadmapPage from './RoadmapPage'
 
 type Section = 'overview' | 'problems' | 'roadmap' | 'review'
 
@@ -37,7 +38,7 @@ function App() {
         <nav aria-label="Dashboard navigation" className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:px-3 lg:pb-0">
           {navigation.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setSection(id)} aria-current={section === id ? 'page' : undefined} className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition lg:w-full ${section === id ? 'bg-indigo-500/15 text-indigo-200 ring-1 ring-inset ring-indigo-400/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><Icon size={18} /><span>{label}</span></button>)}
         </nav>
-        <div className="mt-auto hidden border-t border-white/10 p-5 lg:block"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project status</p><p className="mt-2 text-sm text-slate-300">Codeforces import</p><p className="mt-1 text-xs leading-5 text-slate-500">Only public coding history is available in this milestone.</p></div>
+        <div className="mt-auto hidden border-t border-white/10 p-5 lg:block"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Project status</p><p className="mt-2 text-sm text-slate-300">Learning roadmap</p><p className="mt-1 text-xs leading-5 text-slate-500">Sign in on Roadmap to save your milestone progress.</p></div>
       </aside>
       <main className="min-w-0 flex-1 px-5 pb-16 pt-8 sm:px-8 lg:px-12 lg:pt-10">
         <header className="flex flex-wrap items-start justify-between gap-5 border-b border-white/10 pb-8"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">Workspace / {section}</p><h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{section === 'overview' ? 'Your dashboard' : navigation.find((item) => item.id === section)?.label}</h1><p className="mt-2 text-sm text-slate-400">Explore public Codeforces activity and your next steps.</p></div><div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-slate-400"><span className={`size-2 rounded-full ${service.kind === 'ready' ? 'bg-emerald-400' : service.kind === 'loading' ? 'bg-amber-400' : 'bg-rose-400'}`} />{service.kind === 'loading' ? 'Checking services' : service.kind === 'ready' ? 'Services ready' : service.kind === 'setup' ? 'Setup needed' : 'Connection issue'}</div></header>
@@ -49,7 +50,7 @@ function App() {
         </div>
         {section === 'overview' && <CodeforcesPanel />}
         {section === 'problems' && <RecommendationsPage onOpenOverview={() => setSection('overview')} />}
-        {section === 'roadmap' && <EmptySection title="Learning roadmap" description="Prerequisite-based milestones will appear here in a later milestone." icon={Map} />}
+        {section === 'roadmap' && <RoadmapPage onOpenOverview={() => setSection('overview')} />}
         {section === 'review' && <EmptySection title="Code review" description="AI feedback on pasted solutions will appear here in a later milestone." icon={Code2} />}
       </main>
     </div>
