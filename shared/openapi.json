@@ -256,6 +256,33 @@
             "title": "Database",
             "type": "string"
           },
+          "missing_tables": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Tables",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_configured",
+                  "dns_failure",
+                  "authentication_failed",
+                  "connection_failed",
+                  "missing_tables",
+                  "database_error"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
           "status": {
             "enum": [
               "ok",

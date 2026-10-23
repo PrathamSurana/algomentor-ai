@@ -18,6 +18,11 @@ class HealthResponse(BaseModel):
 class ReadinessResponse(BaseModel):
     status: Literal["ok", "unavailable"]
     database: Literal["connected", "unavailable"]
+    reason: Literal[
+        "not_configured", "dns_failure", "authentication_failed",
+        "connection_failed", "missing_tables", "database_error",
+    ] | None = None
+    missing_tables: list[str] = []
 
 
 settings = get_settings()
@@ -46,7 +51,11 @@ def health() -> HealthResponse:
     tags=["health"],
 )
 def ready(response: Response) -> ReadinessResponse:
-    if check_database():
+    database = check_database()
+    if database.connected:
         return ReadinessResponse(status="ok", database="connected")
     response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    return ReadinessResponse(status="unavailable", database="unavailable")
+    return ReadinessResponse(
+        status="unavailable", database="unavailable",
+        reason=database.reason, missing_tables=list(database.missing_tables),
+    )

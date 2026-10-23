@@ -269,6 +269,13 @@ export interface components {
              */
             database: "connected" | "unavailable";
             /**
+             * Missing Tables
+             * @default []
+             */
+            missing_tables: string[];
+            /** Reason */
+            reason?: ("not_configured" | "dns_failure" | "authentication_failed" | "connection_failed" | "missing_tables" | "database_error") | null;
+            /**
              * Status
              * @enum {string}
              */

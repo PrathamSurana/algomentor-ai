@@ -11,7 +11,7 @@ AlgoMentor AI is a DSA and competitive programming coach in development. It impo
 
 ## Local setup
 
-Run these commands from the repository root. The health endpoint works without Supabase credentials. To make `/health/ready` return 200, configure the database connection in step 2.
+Run these commands from the repository root. The health endpoint works without Supabase credentials. To make `/health/ready` return 200, configure the database connection and apply all three existing SQL migrations in step 2. The backend loads `backend/.env` by its file path, independent of the shell's working directory.
 
 1. Install the backend:
 
@@ -23,9 +23,9 @@ Run these commands from the repository root. The health endpoint works without S
    cd ..
    ```
 
-2. Edit `backend/.env`. Replace `DATABASE_URL` with the Supabase **Session pooler** connection URI from the Supabase dashboard. Change the scheme from `postgresql://` to `postgresql+psycopg://` and add `?sslmode=require` (or `&sslmode=require` if the URI already has query parameters). URL-encode special characters in the password. The placeholder URI in `.env.example` is intentionally unusable. Keep this file local; it is gitignored.
+2. Edit `backend/.env`. Replace `DATABASE_URL` with the Supabase **Session pooler** connection URI from the project's **Connect** dialog (port 5432). This is the IPv4 option for networks that cannot use Supabase's direct IPv6 endpoint. Copy its host and `postgres.<project-ref>` username exactly; the pooler host cannot be inferred from the project reference. Change the scheme from `postgresql://` to `postgresql+psycopg://` and add `?sslmode=require` (or `&sslmode=require` if the URI already has query parameters). URL-encode special characters in the password. The placeholder URI in `.env.example` is intentionally unusable. Keep this file local; it is gitignored.
 
-   In the Supabase SQL Editor, run the full contents of `backend/migrations/001_codeforces.sql`, then `backend/migrations/002_roadmap.sql`, then `backend/migrations/003_code_reviews.sql`. These create the public Codeforces tables and user-owned roadmap and review tables. All migrations enable row-level security with no browser policies; FastAPI uses the server-side database connection. The application does not create tables automatically. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env` to your project's values.
+   In the Supabase SQL Editor, run the full contents of `backend/migrations/001_codeforces.sql`, then `backend/migrations/002_roadmap.sql`, then `backend/migrations/003_code_reviews.sql`. These are the project's existing migration process; no Alembic setup is required. They create the public Codeforces tables and user-owned roadmap and review tables. All migrations enable row-level security with no browser policies; FastAPI uses the server-side database connection. The application does not create tables automatically. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env` to your project's values.
 
    To enable reviews, set `AI_PROVIDER=gemini` and `GEMINI_API_KEY`, or `AI_PROVIDER=openai` and `OPENAI_API_KEY` in `backend/.env`. `GEMINI_MODEL` and `OPENAI_MODEL` select the provider model. Use a model that supports structured JSON output; the example file includes defaults. Restart FastAPI after editing `.env`. These keys must remain on the backend.
 
@@ -50,7 +50,7 @@ Run these commands from the repository root. The health endpoint works without S
    make dev-web
    ```
 
-5. Open `http://localhost:5173`. API docs are at `http://localhost:8000/docs`. Check liveness with `curl http://localhost:8000/health`; check the configured database with `curl -i http://localhost:8000/health/ready`. A 503 readiness response means the database URL is unset, still a placeholder, or unreachable. Enter a public Codeforces handle and click **Sync history**. The dashboard shows the imported submission and distinct solved counts, a topic chart, and the most recent 100 solved problems. If it offers **Load older submissions**, click that to continue the stored pagination cursor.
+5. Open `http://localhost:5173`. API docs are at `http://localhost:8000/docs`. Check liveness with `curl http://localhost:8000/health`; check the configured database with `curl -i http://localhost:8000/health/ready`. The readiness response returns 200 only when PostgreSQL accepts the connection and all five tables from migrations 001–003 exist. A 503 response includes a safe `reason` such as `dns_failure`, `authentication_failed`, or `missing_tables`; it never includes credentials. Restart FastAPI after changing `.env`. Enter a public Codeforces handle and click **Sync history**. The dashboard shows the imported submission and distinct solved counts, a topic chart, and the most recent 100 solved problems. If it offers **Load older submissions**, click that to continue the stored pagination cursor.
 
 ## Codeforces sync API
 
@@ -91,6 +91,6 @@ The backend is the source of truth for the API contract. The frontend imports ge
 
 - Vercel: use `frontend` as the root directory, `npm run build` as the build command, and `dist` as the output directory. Set `VITE_API_BASE_URL` to the hosted FastAPI origin.
 - FastAPI: build `backend/Dockerfile` on an independent container host. Set `FRONTEND_ORIGIN` to the exact Vercel origin and provide `DATABASE_URL` as a server-side secret.
-- Apply all three SQL migrations in order. The readiness check runs only `SELECT 1`; it does not verify migrations. Configure the production Vercel origin in Supabase Auth redirect URLs and set matching public/backend Supabase variables. Set the AI provider and API key as backend environment variables to enable reviews.
+- Apply all three SQL migrations in order. The readiness check verifies the connection and required table names. Configure the production Vercel origin in Supabase Auth redirect URLs and set matching public/backend Supabase variables. Set the AI provider and API key as backend environment variables to enable reviews.
 
 AI feedback is advisory and may be incorrect. Provider and Codeforces tests use mocked responses; they do not verify a live provider, account, or network connection.

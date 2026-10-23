@@ -38,7 +38,20 @@ export async function getServiceState(signal: AbortSignal): Promise<ServiceState
 
     const readiness = await readJson<ReadinessResponse>('/health/ready', signal)
     if (readiness.response.status === 503 && readiness.body.database === 'unavailable') {
-      return { kind: 'setup', message: 'API connected. Configure DATABASE_URL to connect Supabase PostgreSQL.' }
+      const reason = readiness.body.reason
+      if (reason === 'missing_tables') {
+        return { kind: 'setup', message: `Database connected. Apply the existing SQL migrations in order. Missing: ${readiness.body.missing_tables.join(', ')}.` }
+      }
+      if (reason === 'dns_failure') {
+        return { kind: 'error', message: 'The database hostname did not resolve. Check the Supabase Connect details; use the Session pooler if your network lacks IPv6.' }
+      }
+      if (reason === 'authentication_failed') {
+        return { kind: 'error', message: 'The database rejected the credentials. Check the password and username from Supabase Connect.' }
+      }
+      if (reason === 'not_configured') {
+        return { kind: 'setup', message: 'Set DATABASE_URL in backend/.env, then restart FastAPI.' }
+      }
+      return { kind: 'error', message: 'The database connection failed. Check Supabase connectivity and backend logs.' }
     }
     if (!readiness.response.ok || readiness.body.status !== 'ok') {
       return { kind: 'error', message: 'The API readiness check failed. Try again.' }
