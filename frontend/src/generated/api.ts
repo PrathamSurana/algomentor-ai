@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Analytics */
+        get: operations["analytics_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/codeforces/sync": {
         parameters: {
             query?: never;
@@ -106,6 +123,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platforms/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Accounts */
+        get: operations["accounts_platforms_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platforms/codeforces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink Codeforces */
+        delete: operations["unlink_codeforces_platforms_codeforces_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platforms/codeforces/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Codeforces */
+        post: operations["link_codeforces_platforms_codeforces_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platforms/codeforces/ratings/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Codeforces Ratings */
+        post: operations["sync_codeforces_ratings_platforms_codeforces_ratings_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platforms/codeforces/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Codeforces Account */
+        post: operations["sync_codeforces_account_platforms_codeforces_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews": {
         parameters: {
             query?: never;
@@ -158,6 +260,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roadmap/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Challenge Tree */
+        get: operations["get_challenge_tree_roadmap_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roadmap/{key}": {
         parameters: {
             query?: never;
@@ -179,6 +298,158 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountSyncRequest */
+        AccountSyncRequest: {
+            /**
+             * Mode
+             * @default refresh
+             * @enum {string}
+             */
+            mode: "refresh" | "continue";
+            /** Username */
+            username: string;
+        };
+        /** AccountSyncResponse */
+        AccountSyncResponse: {
+            /** Handle */
+            handle: string;
+            /** Has More */
+            has_more: boolean;
+            /** New Submissions */
+            new_submissions: number;
+            /**
+             * Rating History Status
+             * @enum {string}
+             */
+            rating_history_status: "ready" | "error";
+            /**
+             * Synced At
+             * Format: date-time
+             */
+            synced_at: string;
+            /** Total Submissions */
+            total_submissions: number;
+        };
+        /** AccountsResponse */
+        AccountsResponse: {
+            /** Accounts */
+            accounts: components["schemas"]["LinkedAccountResponse"][];
+        };
+        /** AnalyticsResponse */
+        AnalyticsResponse: {
+            /** Attempt Vs Accepted */
+            attempt_vs_accepted: {
+                [key: string]: unknown;
+            };
+            /** Codeforces */
+            codeforces: {
+                [key: string]: unknown;
+            } | null;
+            /** Difficulty */
+            difficulty: {
+                [key: string]: unknown;
+            }[];
+            /** Difficulty Progression */
+            difficulty_progression: {
+                [key: string]: unknown;
+            }[];
+            /** Heatmap */
+            heatmap: {
+                [key: string]: unknown;
+            }[];
+            /** Insights */
+            insights: {
+                [key: string]: unknown;
+            }[];
+            /** Kpis */
+            kpis: {
+                [key: string]: unknown;
+            };
+            /** Limitations */
+            limitations: string[];
+            /** Rating History */
+            rating_history: {
+                [key: string]: unknown;
+            }[];
+            /** Recent Activity */
+            recent_activity: {
+                [key: string]: unknown;
+            }[];
+            /** Recommendations */
+            recommendations: {
+                [key: string]: unknown;
+            }[];
+            /** Roadmap */
+            roadmap: {
+                [key: string]: unknown;
+            };
+            /** Strengths */
+            strengths: {
+                [key: string]: unknown;
+            }[];
+            /** Timeline */
+            timeline: {
+                [key: string]: unknown;
+            }[];
+            /** Topics */
+            topics: {
+                [key: string]: unknown;
+            }[];
+            /** Weaknesses */
+            weaknesses: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ChallengeResponse */
+        ChallengeResponse: {
+            /** Contest Id */
+            contest_id: number;
+            /** Problem Index */
+            problem_index: string;
+            /** Rating */
+            rating: number | null;
+            /** Required */
+            required: boolean;
+            /** Solved At */
+            solved_at: string | null;
+            /** Tags */
+            tags: string[];
+            /** Tier */
+            tier: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            /** Verified */
+            verified: boolean;
+        };
+        /** ChallengeTreeResponse */
+        ChallengeTreeResponse: {
+            /** Achievements */
+            achievements: {
+                [key: string]: unknown;
+            }[];
+            /** Completed Count */
+            completed_count: number;
+            /** Handle */
+            handle: string | null;
+            /** Nodes */
+            nodes: components["schemas"]["TopicNodeResponse"][];
+            /** Recommended Key */
+            recommended_key: string | null;
+            /** Streak Days */
+            streak_days: number;
+            /** Sync Status */
+            sync_status: string;
+            /** Synced At */
+            synced_at: string | null;
+            /** Total Count */
+            total_count: number;
+            /** Verified Challenges */
+            verified_challenges: number;
+            /** Xp */
+            xp: number;
+        };
         /** ComplexityEstimate */
         ComplexityEstimate: {
             /** Estimate */
@@ -198,6 +469,27 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** LinkRequest */
+        LinkRequest: {
+            /** Username */
+            username: string;
+        };
+        /** LinkedAccountResponse */
+        LinkedAccountResponse: {
+            /**
+             * Platform
+             * @constant
+             */
+            platform: "codeforces";
+            /** Sync Error */
+            sync_error: string | null;
+            /** Sync Status */
+            sync_status: string;
+            /** Synced At */
+            synced_at: string | null;
+            /** Username */
+            username: string;
         };
         /** MilestoneResponse */
         MilestoneResponse: {
@@ -260,6 +552,11 @@ export interface components {
         ProgressUpdate: {
             /** Completed */
             completed: boolean;
+        };
+        /** RatingSyncResponse */
+        RatingSyncResponse: {
+            /** Contest Count */
+            contest_count: number;
         };
         /** ReadinessResponse */
         ReadinessResponse: {
@@ -564,6 +861,35 @@ export interface components {
             /** Topic */
             topic: string;
         };
+        /** TopicNodeResponse */
+        TopicNodeResponse: {
+            /** Challenges */
+            challenges: components["schemas"]["ChallengeResponse"][];
+            /** Codeforces Tag */
+            codeforces_tag: string;
+            /** Completed At */
+            completed_at: string | null;
+            /** Key */
+            key: string;
+            /** Missing Prerequisites */
+            missing_prerequisites: string[];
+            /** Pathway */
+            pathway: string;
+            /** Prerequisites */
+            prerequisites: string[];
+            /** Rank */
+            rank: string;
+            /** Required Count */
+            required_count: number;
+            /** State */
+            state: string;
+            /** Title */
+            title: string;
+            /** Verified Count */
+            verified_count: number;
+            /** Xp */
+            xp: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -586,6 +912,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    analytics_analytics_get: {
+        parameters: {
+            query?: {
+                period?: "daily" | "weekly" | "monthly";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sync_codeforces_codeforces_sync_post: {
         parameters: {
             query?: never;
@@ -763,6 +1120,130 @@ export interface operations {
             };
         };
     };
+    accounts_platforms_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountsResponse"];
+                };
+            };
+        };
+    };
+    unlink_codeforces_platforms_codeforces_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    link_codeforces_platforms_codeforces_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkedAccountResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_codeforces_ratings_platforms_codeforces_ratings_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingSyncResponse"];
+                };
+            };
+        };
+    };
+    sync_codeforces_account_platforms_codeforces_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reviews_reviews_get: {
         parameters: {
             query?: {
@@ -885,6 +1366,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_challenge_tree_roadmap_tree_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeTreeResponse"];
                 };
             };
         };

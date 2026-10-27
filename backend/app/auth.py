@@ -54,7 +54,7 @@ def get_current_user(
         )
     try:
         return UUID(response.json()["id"])
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise HTTPException(
             status_code=503,
             detail={"code": "auth_bad_response", "message": "Authentication response is invalid"},

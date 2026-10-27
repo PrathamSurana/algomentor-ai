@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
+from app.challenge_tree import problem_url
 from app.codeforces import CodeforcesClient, CodeforcesError
 from app.models import CodeforcesUser, Problem, Submission
 from app.recommendation_engine import RECOMMENDATION_VERSION, CandidateProblem, rank_problems
@@ -78,7 +79,11 @@ def sync_handle(session: Session, client: CodeforcesClient, handle: str, mode: s
     if latest_catalog and latest_catalog.tzinfo is None:
         latest_catalog = latest_catalog.replace(tzinfo=timezone.utc)
     refresh_catalog = latest_catalog is None or now - latest_catalog > CATALOG_TTL
-    catalog = client.problemset() if refresh_catalog else None
+    # Submission history remains usable if the optional global catalog is temporarily unavailable.
+    try:
+        catalog = client.problemset() if refresh_catalog else None
+    except CodeforcesError:
+        catalog = None
 
     start = user.next_from if mode == "continue" and user else 1
     page_rows: list[dict] = []
@@ -117,6 +122,8 @@ def sync_handle(session: Session, client: CodeforcesClient, handle: str, mode: s
             raise CodeforcesError(
                 "codeforces_bad_response", "Submission problem identity is incomplete"
             )
+        if problem.get("contestId") is None and isinstance(raw.get("contestId"), int):
+            problem = {**problem, "contestId": raw["contestId"]}
         normalized = _problem(problem, now)
         if normalized:
             problem_rows[(normalized["contest_id"], normalized["problem_index"])] = normalized
@@ -207,7 +214,7 @@ def get_summary(session: Session, handle: str) -> dict | None:
             ),
         )
         .where(Submission.handle_key == user.handle_key, Submission.verdict == "OK")
-        .order_by(Submission.created_at.desc())
+        .order_by(Submission.created_at.asc())
     ).all()
     solved: dict[tuple[int, str], dict] = {}
     topics: Counter[str] = Counter()
@@ -229,7 +236,7 @@ def get_summary(session: Session, handle: str) -> dict | None:
             "rating": problem.rating if problem else submission.rating_at_import,
             "tags": tags or [],
             "solved_at": submission.created_at,
-            "url": f"https://codeforces.com/problemset/problem/{submission.contest_id}/{submission.problem_index}",
+            "url": problem_url(submission.contest_id, submission.problem_index),
         }
     return {
         "handle": user.handle,
@@ -244,7 +251,9 @@ def get_summary(session: Session, handle: str) -> dict | None:
             {"topic": topic, "solved_count": count}
             for topic, count in sorted(topics.items(), key=lambda item: (-item[1], item[0]))
         ],
-        "solved_problems": list(solved.values())[:100],
+        "solved_problems": sorted(
+            solved.values(), key=lambda item: item["solved_at"], reverse=True
+        )[:100],
     }
 
 

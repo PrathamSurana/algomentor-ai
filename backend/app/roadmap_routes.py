@@ -55,7 +55,8 @@ def _progress(session: Session, user_id: UUID, handle: str | None) -> dict:
         ).all()
     )
     assessment = get_skill_assessment(session, handle) if handle else None
-    return build_roadmap(completed, assessment["topics"] if assessment else None)
+    roadmap = build_roadmap(completed, assessment["topics"] if assessment else None)
+    return roadmap
 
 
 def _database_error(exc: SQLAlchemyError) -> HTTPException:

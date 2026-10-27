@@ -1,0 +1,99 @@
+[
+  {
+    "contest_id": 1,
+    "problem_index": "A",
+    "title": "Theatre Square",
+    "rating": 1000,
+    "tags": [
+      "math"
+    ],
+    "solved_count": 337752,
+    "url": "https://codeforces.com/problemset/problem/1/A"
+  },
+  {
+    "contest_id": 118,
+    "problem_index": "A",
+    "title": "String Task",
+    "rating": 1000,
+    "tags": [
+      "implementation",
+      "strings"
+    ],
+    "solved_count": 243556,
+    "url": "https://codeforces.com/problemset/problem/118/A"
+  },
+  {
+    "contest_id": 69,
+    "problem_index": "A",
+    "title": "Young Physicist",
+    "rating": 1000,
+    "tags": [
+      "implementation",
+      "math"
+    ],
+    "solved_count": 212995,
+    "url": "https://codeforces.com/problemset/problem/69/A"
+  },
+  {
+    "contest_id": 58,
+    "problem_index": "A",
+    "title": "Chat room",
+    "rating": 1000,
+    "tags": [
+      "greedy",
+      "strings"
+    ],
+    "solved_count": 163701,
+    "url": "https://codeforces.com/problemset/problem/58/A"
+  },
+  {
+    "contest_id": 122,
+    "problem_index": "A",
+    "title": "Lucky Division",
+    "rating": 1000,
+    "tags": [
+      "brute force",
+      "number theory"
+    ],
+    "solved_count": 157299,
+    "url": "https://codeforces.com/problemset/problem/122/A"
+  },
+  {
+    "contest_id": 4,
+    "problem_index": "C",
+    "title": "Registration System",
+    "rating": 1300,
+    "tags": [
+      "data structures",
+      "hashing",
+      "implementation"
+    ],
+    "solved_count": 117946,
+    "url": "https://codeforces.com/problemset/problem/4/C"
+  },
+  {
+    "contest_id": 479,
+    "problem_index": "A",
+    "title": "Expression",
+    "rating": 1000,
+    "tags": [
+      "brute force",
+      "math"
+    ],
+    "solved_count": 117776,
+    "url": "https://codeforces.com/problemset/problem/479/A"
+  },
+  {
+    "contest_id": 158,
+    "problem_index": "B",
+    "title": "Taxi",
+    "rating": 1100,
+    "tags": [
+      "*special",
+      "greedy",
+      "implementation"
+    ],
+    "solved_count": 109861,
+    "url": "https://codeforces.com/problemset/problem/158/B"
+  }
+]

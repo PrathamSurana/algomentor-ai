@@ -1,6 +1,404 @@
 {
   "components": {
     "schemas": {
+      "AccountSyncRequest": {
+        "properties": {
+          "mode": {
+            "default": "refresh",
+            "enum": [
+              "refresh",
+              "continue"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 24,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "AccountSyncRequest",
+        "type": "object"
+      },
+      "AccountSyncResponse": {
+        "properties": {
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "new_submissions": {
+            "title": "New Submissions",
+            "type": "integer"
+          },
+          "rating_history_status": {
+            "enum": [
+              "ready",
+              "error"
+            ],
+            "title": "Rating History Status",
+            "type": "string"
+          },
+          "synced_at": {
+            "format": "date-time",
+            "title": "Synced At",
+            "type": "string"
+          },
+          "total_submissions": {
+            "title": "Total Submissions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "handle",
+          "new_submissions",
+          "total_submissions",
+          "has_more",
+          "synced_at",
+          "rating_history_status"
+        ],
+        "title": "AccountSyncResponse",
+        "type": "object"
+      },
+      "AccountsResponse": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/LinkedAccountResponse"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "AccountsResponse",
+        "type": "object"
+      },
+      "AnalyticsResponse": {
+        "properties": {
+          "attempt_vs_accepted": {
+            "additionalProperties": true,
+            "title": "Attempt Vs Accepted",
+            "type": "object"
+          },
+          "codeforces": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codeforces"
+          },
+          "difficulty": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Difficulty",
+            "type": "array"
+          },
+          "difficulty_progression": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Difficulty Progression",
+            "type": "array"
+          },
+          "heatmap": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Heatmap",
+            "type": "array"
+          },
+          "insights": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Insights",
+            "type": "array"
+          },
+          "kpis": {
+            "additionalProperties": true,
+            "title": "Kpis",
+            "type": "object"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "rating_history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rating History",
+            "type": "array"
+          },
+          "recent_activity": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Recent Activity",
+            "type": "array"
+          },
+          "recommendations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "roadmap": {
+            "additionalProperties": true,
+            "title": "Roadmap",
+            "type": "object"
+          },
+          "strengths": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Strengths",
+            "type": "array"
+          },
+          "timeline": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "topics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "weaknesses": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Weaknesses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "codeforces",
+          "kpis",
+          "timeline",
+          "heatmap",
+          "topics",
+          "strengths",
+          "weaknesses",
+          "difficulty",
+          "difficulty_progression",
+          "rating_history",
+          "recommendations",
+          "roadmap",
+          "attempt_vs_accepted",
+          "recent_activity",
+          "insights",
+          "limitations"
+        ],
+        "title": "AnalyticsResponse",
+        "type": "object"
+      },
+      "ChallengeResponse": {
+        "properties": {
+          "contest_id": {
+            "title": "Contest Id",
+            "type": "integer"
+          },
+          "problem_index": {
+            "title": "Problem Index",
+            "type": "string"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "solved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solved At"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tier",
+          "contest_id",
+          "problem_index",
+          "title",
+          "rating",
+          "tags",
+          "url",
+          "verified",
+          "solved_at",
+          "required"
+        ],
+        "title": "ChallengeResponse",
+        "type": "object"
+      },
+      "ChallengeTreeResponse": {
+        "properties": {
+          "achievements": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Achievements",
+            "type": "array"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/TopicNodeResponse"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "recommended_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Key"
+          },
+          "streak_days": {
+            "title": "Streak Days",
+            "type": "integer"
+          },
+          "sync_status": {
+            "title": "Sync Status",
+            "type": "string"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          },
+          "verified_challenges": {
+            "title": "Verified Challenges",
+            "type": "integer"
+          },
+          "xp": {
+            "title": "Xp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "handle",
+          "synced_at",
+          "sync_status",
+          "nodes",
+          "completed_count",
+          "total_count",
+          "verified_challenges",
+          "xp",
+          "streak_days",
+          "recommended_key",
+          "achievements"
+        ],
+        "title": "ChallengeTreeResponse",
+        "type": "object"
+      },
       "ComplexityEstimate": {
         "additionalProperties": false,
         "properties": {
@@ -49,6 +447,71 @@
           "status"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "LinkRequest": {
+        "properties": {
+          "username": {
+            "maxLength": 24,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]{1,24}$",
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "LinkRequest",
+        "type": "object"
+      },
+      "LinkedAccountResponse": {
+        "properties": {
+          "platform": {
+            "const": "codeforces",
+            "title": "Platform",
+            "type": "string"
+          },
+          "sync_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Error"
+          },
+          "sync_status": {
+            "title": "Sync Status",
+            "type": "string"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform",
+          "username",
+          "synced_at",
+          "sync_status",
+          "sync_error"
+        ],
+        "title": "LinkedAccountResponse",
         "type": "object"
       },
       "MilestoneResponse": {
@@ -244,6 +707,19 @@
           "completed"
         ],
         "title": "ProgressUpdate",
+        "type": "object"
+      },
+      "RatingSyncResponse": {
+        "properties": {
+          "contest_count": {
+            "title": "Contest Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "contest_count"
+        ],
+        "title": "RatingSyncResponse",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -1156,6 +1632,96 @@
         "title": "TopicCount",
         "type": "object"
       },
+      "TopicNodeResponse": {
+        "properties": {
+          "challenges": {
+            "items": {
+              "$ref": "#/components/schemas/ChallengeResponse"
+            },
+            "title": "Challenges",
+            "type": "array"
+          },
+          "codeforces_tag": {
+            "title": "Codeforces Tag",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "missing_prerequisites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Prerequisites",
+            "type": "array"
+          },
+          "pathway": {
+            "title": "Pathway",
+            "type": "string"
+          },
+          "prerequisites": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Prerequisites",
+            "type": "array"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "string"
+          },
+          "required_count": {
+            "title": "Required Count",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "verified_count": {
+            "title": "Verified Count",
+            "type": "integer"
+          },
+          "xp": {
+            "title": "Xp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "pathway",
+          "prerequisites",
+          "missing_prerequisites",
+          "codeforces_tag",
+          "state",
+          "verified_count",
+          "required_count",
+          "xp",
+          "rank",
+          "completed_at",
+          "challenges"
+        ],
+        "title": "TopicNodeResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1210,6 +1776,59 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/analytics": {
+      "get": {
+        "operationId": "analytics_analytics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "daily",
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Analytics",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
     "/codeforces/sync": {
       "post": {
         "operationId": "sync_codeforces_codeforces_sync_post",
@@ -1450,6 +2069,169 @@
         ]
       }
     },
+    "/platforms/accounts": {
+      "get": {
+        "operationId": "accounts_platforms_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accounts",
+        "tags": [
+          "platforms"
+        ]
+      }
+    },
+    "/platforms/codeforces": {
+      "delete": {
+        "operationId": "unlink_codeforces_platforms_codeforces_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink Codeforces",
+        "tags": [
+          "platforms"
+        ]
+      }
+    },
+    "/platforms/codeforces/link": {
+      "post": {
+        "operationId": "link_codeforces_platforms_codeforces_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkedAccountResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Codeforces",
+        "tags": [
+          "platforms"
+        ]
+      }
+    },
+    "/platforms/codeforces/ratings/sync": {
+      "post": {
+        "operationId": "sync_codeforces_ratings_platforms_codeforces_ratings_sync_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync Codeforces Ratings",
+        "tags": [
+          "platforms"
+        ]
+      }
+    },
+    "/platforms/codeforces/sync": {
+      "post": {
+        "operationId": "sync_codeforces_account_platforms_codeforces_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync Codeforces Account",
+        "tags": [
+          "platforms"
+        ]
+      }
+    },
     "/reviews": {
       "get": {
         "operationId": "list_reviews_reviews_get",
@@ -1644,6 +2426,32 @@
           }
         ],
         "summary": "Get Roadmap",
+        "tags": [
+          "roadmap"
+        ]
+      }
+    },
+    "/roadmap/tree": {
+      "get": {
+        "operationId": "get_challenge_tree_roadmap_tree_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeTreeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Challenge Tree",
         "tags": [
           "roadmap"
         ]

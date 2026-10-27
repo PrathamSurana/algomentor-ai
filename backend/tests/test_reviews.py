@@ -1,8 +1,11 @@
+import json
 from unittest.mock import Mock, patch
 from uuid import UUID
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
+from google.genai import errors
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
@@ -28,33 +31,128 @@ FEEDBACK = {
 }
 
 
+@pytest.mark.parametrize("provider,key_name", [
+    ("openai", "OPENAI_API_KEY"),
+    ("gemini", "GEMINI_API_KEY"),
+])
+def test_missing_selected_provider_key_returns_sanitized_503(monkeypatch, provider, key_name):
+    from app import review_provider
+
+    settings = Settings(
+        _env_file=None, ai_provider=provider, openai_api_key=None, gemini_api_key=None
+    )
+    monkeypatch.setattr(review_provider, "get_settings", lambda: settings)
+    app.dependency_overrides[get_current_user] = lambda: USER_1
+    app.dependency_overrides[get_session] = lambda: object()
+    try:
+        response = TestClient(app, raise_server_exceptions=False).post(
+            "/reviews", json={"language": "python", "code": CODE}
+        )
+        assert response.status_code == 503
+        assert response.json() == {"detail": {
+            "code": "provider_unconfigured",
+            "message": f"Configure {key_name} on the backend and restart the API.",
+        }}
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_openai_key_requires_explicit_openai_provider():
+    settings = Settings(
+        _env_file=None, ai_provider="gemini", openai_api_key="test-key", gemini_api_key=None
+    )
+    with httpx.Client() as client:
+        try:
+            ReviewProvider(settings, client)
+            raise AssertionError("Expected missing Gemini key")
+        except ReviewProviderError as exc:
+            assert exc.code == "provider_unconfigured"
+            assert "GEMINI_API_KEY" in exc.message
+
+
 def test_provider_adapters_parse_structured_feedback():
-    for name in ("openai", "gemini"):
-        def respond(request: httpx.Request, provider_name=name) -> httpx.Response:
-            import json
+    def respond(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        assert request.url.path == "/v1/chat/completions"
+        assert CODE in json.loads(payload["messages"][1]["content"])["source_code"]
+        assert payload["response_format"]["json_schema"]["strict"] is True
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": json.dumps(FEEDBACK)}}]
+        })
 
-            payload = json.loads(request.content)
-            assert CODE in json.loads(
-                payload["messages"][1]["content"] if provider_name == "openai"
-                else payload["contents"][0]["parts"][0]["text"]
-            )["source_code"]
-            if provider_name == "openai":
-                assert request.url.path == "/v1/chat/completions"
-                assert payload["response_format"]["json_schema"]["strict"] is True
-                body = {"choices": [{"message": {"content": json.dumps(FEEDBACK)}}]}
-            else:
-                assert request.url.path.endswith(":generateContent")
-                mime_type = payload["generationConfig"]["responseFormat"]["text"]["mimeType"]
-                assert mime_type == "application/json"
-                body = {"candidates": [{"content": {"parts": [{"text": json.dumps(FEEDBACK)}]}}]}
-            return httpx.Response(200, json=body)
-
-        client = httpx.Client(transport=httpx.MockTransport(respond))
-        provider = ReviewProvider(Settings(
-            ai_provider=name, gemini_api_key="test-key", openai_api_key="test-key"
-        ), client)
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        provider = ReviewProvider(
+            Settings(_env_file=None, ai_provider="openai", openai_api_key="test-key"), client
+        )
         result = provider.review(ReviewRequest(language="python", code=CODE), None)
         assert result.time_complexity.estimate == "O(n)"
+
+
+def test_gemini_sdk_uses_structured_json_and_validates_feedback():
+    sdk = Mock()
+    sdk.models.generate_content.return_value.text = json.dumps(FEEDBACK)
+    provider = ReviewProvider(
+        Settings(_env_file=None, ai_provider="gemini", gemini_api_key="test-key",
+                 gemini_model="gemini-3.5-flash-lite"),
+        gemini_client=sdk,
+    )
+    feedback = provider.review(ReviewRequest(language="cpp", code="int main() { return 0; }"), None)
+    assert feedback.approach_summary == FEEDBACK["approach_summary"]
+    kwargs = sdk.models.generate_content.call_args.kwargs
+    assert kwargs["model"] == "gemini-3.5-flash-lite"
+    assert json.loads(kwargs["contents"])["language"] == "cpp"
+    assert kwargs["config"].response_mime_type == "application/json"
+    assert kwargs["config"].response_json_schema["required"] == list(FEEDBACK)
+    assert "correctness issues" in kwargs["config"].system_instruction
+    assert "improved approach" in kwargs["config"].system_instruction
+
+    sdk.models.generate_content.return_value.text = '{"approach_summary":"incomplete"}'
+    with pytest.raises(ReviewProviderError) as invalid:
+        provider.review(ReviewRequest(language="python", code=CODE), None)
+    assert invalid.value.code == "provider_invalid_response"
+
+
+@pytest.mark.parametrize("status,payload,expected_code,attempts", [
+    (404, {"message": "invalid model"}, "provider_model_unavailable", 1),
+    (403, {"message": "secret diagnostic"}, "provider_auth_failed", 1),
+    (429, {"error": {"message": "quota exceeded", "details": [
+        {"reason": "QUOTA_EXHAUSTED"}
+    ]}}, "provider_quota_exhausted", 1),
+    (429, {"error": {"message": "rate_limit_exceeded"}}, "provider_rate_limited", 1),
+    (503, {"message": "unavailable"}, "provider_unavailable", 2),
+])
+def test_gemini_errors_are_sanitized_and_only_transient_failures_retry(
+    status, payload, expected_code, attempts,
+):
+    sdk = Mock()
+    sdk.models.generate_content.side_effect = errors.APIError(status, payload)
+    provider = ReviewProvider(
+        Settings(_env_file=None, ai_provider="gemini", gemini_api_key="test-key"),
+        gemini_client=sdk,
+    )
+    with patch("app.review_provider.time.sleep"):
+        with pytest.raises(ReviewProviderError) as failure:
+            provider.review(ReviewRequest(language="python", code=CODE), None)
+    assert failure.value.code == expected_code
+    assert "secret diagnostic" not in failure.value.message
+    assert sdk.models.generate_content.call_count == attempts
+
+
+def test_gemini_timeout_is_sanitized():
+    sdk = Mock()
+    sdk.models.generate_content.side_effect = httpx.TimeoutException("secret diagnostic")
+    provider = ReviewProvider(
+        Settings(_env_file=None, ai_provider="gemini", gemini_api_key="test-key"),
+        gemini_client=sdk,
+    )
+    with patch("app.review_provider.time.sleep"):
+        with pytest.raises(ReviewProviderError) as failure:
+            request = ReviewRequest(language="java", code="class Main { static int x = 1; }")
+            provider.review(request, None)
+    assert failure.value.code == "provider_timeout"
+    assert failure.value.status_code == 504
+    assert "secret diagnostic" not in failure.value.message
+    assert sdk.models.generate_content.call_count == 2
 
 
 def test_provider_rejects_invalid_output_and_retries_transient_failures():

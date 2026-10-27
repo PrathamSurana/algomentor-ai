@@ -1,7 +1,17 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text, Uuid, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -73,5 +83,42 @@ class CodeReview(Base):
     provider: Mapped[str] = mapped_column(String(20), nullable=False)
     model: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class LinkedPlatformAccount(Base):
+    __tablename__ = "linked_platform_accounts"
+
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    platform: Mapped[str] = mapped_column(String(20), primary_key=True)
+    username: Mapped[str] = mapped_column(String(40), nullable=False)
+    username_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sync_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    sync_error: Mapped[str | None] = mapped_column(String(300))
+
+
+class CodeforcesRatingChange(Base):
+    __tablename__ = "codeforces_rating_changes"
+
+    handle_key: Mapped[str] = mapped_column(String(24), primary_key=True)
+    contest_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    contest_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    rated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    old_rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    new_rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    rank: Mapped[int | None] = mapped_column(Integer)
+
+
+class RoadmapChallenge(Base):
+    __tablename__ = "roadmap_challenges"
+
+    user_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    topic_key: Mapped[str] = mapped_column(String(50), primary_key=True)
+    tier: Mapped[str] = mapped_column(String(20), primary_key=True)
+    contest_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    problem_index: Mapped[str] = mapped_column(String(10), nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

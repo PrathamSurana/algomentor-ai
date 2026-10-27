@@ -16,6 +16,7 @@ lint:
 
 test:
 	cd backend && .venv/bin/pytest -q
+	cd frontend && npm run test
 
 build:
 	cd frontend && npm run build

@@ -14,15 +14,25 @@ REQUIRED_TABLES = (
     "codeforces_submissions",
     "roadmap_progress",
     "code_reviews",
+    "linked_platform_accounts",
+    "codeforces_rating_changes",
+    "roadmap_challenges",
 )
 
 
 class DatabaseReadiness(NamedTuple):
     connected: bool
-    reason: Literal[
-        "not_configured", "dns_failure", "authentication_failed",
-        "connection_failed", "missing_tables", "database_error",
-    ] | None = None
+    reason: (
+        Literal[
+            "not_configured",
+            "dns_failure",
+            "authentication_failed",
+            "connection_failed",
+            "missing_tables",
+            "database_error",
+        ]
+        | None
+    ) = None
     missing_tables: tuple[str, ...] = ()
 
 
@@ -32,7 +42,10 @@ def get_engine() -> Engine:
     if not database_url:
         raise RuntimeError("DATABASE_URL is not configured")
     return create_engine(
-        database_url, pool_pre_ping=True, pool_size=5, max_overflow=5,
+        database_url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=5,
         connect_args={"connect_timeout": 8},
     )
 
@@ -42,9 +55,12 @@ def check_database() -> DatabaseReadiness:
         with get_engine().connect() as connection:
             connection.execute(text("SELECT 1"))
             present = {
-                name for name in REQUIRED_TABLES
-                if connection.scalar(text("SELECT to_regclass(:table_name)"),
-                                     {"table_name": f"public.{name}"}) is not None
+                name
+                for name in REQUIRED_TABLES
+                if connection.scalar(
+                    text("SELECT to_regclass(:table_name)"), {"table_name": f"public.{name}"}
+                )
+                is not None
             }
         missing = tuple(name for name in REQUIRED_TABLES if name not in present)
         if missing:
@@ -59,10 +75,15 @@ def check_database() -> DatabaseReadiness:
             return DatabaseReadiness(False, "authentication_failed")
         # psycopg may report a DNS failure without SQLSTATE. Keep its text out of the API.
         message = str(original).lower()
-        if any(phrase in message for phrase in (
-            "could not translate host name", "name or service not known",
-            "nodename nor servname provided", "temporary failure in name resolution",
-        )):
+        if any(
+            phrase in message
+            for phrase in (
+                "could not translate host name",
+                "name or service not known",
+                "nodename nor servname provided",
+                "temporary failure in name resolution",
+            )
+        ):
             return DatabaseReadiness(False, "dns_failure")
         if state is None:
             return DatabaseReadiness(False, "connection_failed")

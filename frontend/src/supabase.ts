@@ -8,6 +8,13 @@ export function getSupabaseClient(): SupabaseClient | null {
   if (!url || !key || url.includes('YOUR_PROJECT') || key.includes('YOUR_PUBLISHABLE_KEY')) {
     return null
   }
-  if (!client) client = createClient(url, key)
+  if (!client) client = createClient(url, key, {
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  })
   return client
 }

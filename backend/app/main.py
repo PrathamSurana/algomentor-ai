@@ -4,9 +4,12 @@ from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.analytics_routes import router as analytics_router
+from app.challenge_routes import router as challenge_router
 from app.codeforces_routes import router as codeforces_router
 from app.config import get_settings
 from app.database import check_database
+from app.platform_routes import router as platform_router
 from app.review_routes import router as review_router
 from app.roadmap_routes import router as roadmap_router
 
@@ -18,10 +21,17 @@ class HealthResponse(BaseModel):
 class ReadinessResponse(BaseModel):
     status: Literal["ok", "unavailable"]
     database: Literal["connected", "unavailable"]
-    reason: Literal[
-        "not_configured", "dns_failure", "authentication_failed",
-        "connection_failed", "missing_tables", "database_error",
-    ] | None = None
+    reason: (
+        Literal[
+            "not_configured",
+            "dns_failure",
+            "authentication_failed",
+            "connection_failed",
+            "missing_tables",
+            "database_error",
+        ]
+        | None
+    ) = None
     missing_tables: list[str] = []
 
 
@@ -29,12 +39,15 @@ settings = get_settings()
 app = FastAPI(title="AlgoMentor AI API", version="0.1.0")
 app.include_router(codeforces_router)
 app.include_router(roadmap_router)
+app.include_router(challenge_router)
 app.include_router(review_router)
+app.include_router(platform_router)
+app.include_router(analytics_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -56,6 +69,8 @@ def ready(response: Response) -> ReadinessResponse:
         return ReadinessResponse(status="ok", database="connected")
     response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return ReadinessResponse(
-        status="unavailable", database="unavailable",
-        reason=database.reason, missing_tables=list(database.missing_tables),
+        status="unavailable",
+        database="unavailable",
+        reason=database.reason,
+        missing_tables=list(database.missing_tables),
     )

@@ -42,3 +42,30 @@ def test_auth_rejects_missing_and_invalid_tokens(monkeypatch):
     with pytest.raises(HTTPException) as invalid:
         auth.get_current_user(credentials)
     assert invalid.value.status_code == 401
+
+
+def test_auth_handles_expired_token_and_auth_service_failure(monkeypatch):
+    monkeypatch.setattr(auth, "get_settings", lambda: Settings(
+        supabase_url="https://example.supabase.co",
+        supabase_publishable_key="public-test-key",
+    ))
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="expired-token")
+    monkeypatch.setattr(auth.httpx, "get", lambda *args, **kwargs: httpx.Response(401))
+    with pytest.raises(HTTPException) as expired:
+        auth.get_current_user(credentials)
+    assert expired.value.status_code == 401
+    assert expired.value.detail["code"] == "invalid_token"
+
+    monkeypatch.setattr(auth.httpx, "get", lambda *args, **kwargs: httpx.Response(503))
+    with pytest.raises(HTTPException) as unavailable:
+        auth.get_current_user(credentials)
+    assert unavailable.value.status_code == 503
+    assert unavailable.value.detail["code"] == "auth_unavailable"
+
+    monkeypatch.setattr(auth.httpx, "get", lambda *args, **kwargs: httpx.Response(
+        200, text="not json"
+    ))
+    with pytest.raises(HTTPException) as malformed:
+        auth.get_current_user(credentials)
+    assert malformed.value.status_code == 503
+    assert malformed.value.detail["code"] == "auth_bad_response"
